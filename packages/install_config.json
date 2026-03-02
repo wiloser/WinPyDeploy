@@ -57,10 +57,25 @@
       "installerType": "zip",
       "targetDir": "C:\\Program Files\\MySQL",
       "postInstallCommands": [
-        "powershell -NoProfile -ExecutionPolicy Bypass -Command \"$root='C:\\Program Files\\MySQL';$pw='123456';$d=Get-ChildItem -Directory $root -ErrorAction SilentlyContinue|?{$_.Name -like 'mysql-*winx64*'}|select -First 1;$base=if($d){$d.FullName}else{$root};$bin=Join-Path $base 'bin';$mysqld=Join-Path $bin 'mysqld.exe';$mysqladmin=Join-Path $bin 'mysqladmin.exe';$data=Join-Path $base 'data';New-Item -ItemType Directory -Force -Path $data|Out-Null;$ini=Join-Path $base 'my.ini';if(-not(Test-Path $ini)){$lines=@('[mysqld]',('basedir='+$base),('datadir='+$data),'port=3306','');Set-Content -Encoding ASCII -Path $ini -Value $lines};if(-not(Test-Path (Join-Path $data 'mysql'))){& $mysqld --initialize-insecure --basedir=\"$base\" --datadir=\"$data\";if($LASTEXITCODE -ne 0){throw 'mysqld init failed'}};if(-not(Get-Service -Name 'MySQL80' -ErrorAction SilentlyContinue)){& $mysqld --install MySQL80 --defaults-file=\"$ini\";if($LASTEXITCODE -ne 0){throw 'service install failed'}};try{Start-Service -Name MySQL80 -ErrorAction Stop}catch{};Start-Sleep -Seconds 2;& $mysqladmin -u root status 2>$null;if($LASTEXITCODE -eq 0){& $mysqladmin -u root password $pw;if($LASTEXITCODE -ne 0){throw 'set password failed'}}\""
+        "powershell -NoProfile -ExecutionPolicy Bypass -Command \"$root='C:\\Program Files\\MySQL';$pw='123456';$d=Get-ChildItem -Directory $root -ErrorAction SilentlyContinue|?{$_.Name -like 'mysql-*winx64*'}|select -First 1;$base=if($d){$d.FullName}else{$root};$bin=Join-Path $base 'bin';$mysqld=Join-Path $bin 'mysqld.exe';$mysqladmin=Join-Path $bin 'mysqladmin.exe';$data=Join-Path $base 'data';New-Item -ItemType Directory -Force -Path $data|Out-Null;$ini=Join-Path $base 'my.ini';if(-not(Test-Path $ini)){$lines=@('[mysqld]',('basedir='+$base),('datadir='+$data),'port=3306','');Set-Content -Encoding ASCII -Path $ini -Value $lines};if(-not(Test-Path (Join-Path $data 'mysql'))){& $mysqld --initialize-insecure --basedir=\"$base\" --datadir=\"$data\";if($LASTEXITCODE -ne 0){throw 'mysqld init failed'}};if(-not(Get-Service -Name 'MySQL80' -ErrorAction SilentlyContinue)){& $mysqld --install MySQL80 --defaults-file=\"$ini\";if($LASTEXITCODE -ne 0){throw 'service install failed'}};try{Start-Service -Name MySQL80 -ErrorAction Stop}catch{};Start-Sleep -Seconds 2;& $mysqladmin -u root status 2>$null;if($LASTEXITCODE -eq 0){& $mysqladmin -u root password $pw;if($LASTEXITCODE -ne 0){throw 'set password failed'}}\"",
+        "powershell -NoProfile -ExecutionPolicy Bypass -Command \"$root='C:\\Program Files\\MySQL';$d=Get-ChildItem -Directory $root -ErrorAction SilentlyContinue|?{$_.Name -like 'mysql-*winx64*'}|select -First 1;$base=if($d){$d.FullName}else{$root};$bin=Join-Path $base 'bin';$path=[Environment]::GetEnvironmentVariable('Path','Machine');$parts=$path -split ';' | Where-Object {$_ -and $_ -ne $bin};$new=($bin)+$parts;[Environment]::SetEnvironmentVariable('Path',($new -join ';'),'Machine');Write-Output ('已将 MySQL bin 置顶到 PATH: '+$bin)\""
       ],
       "detectCommands": ["sc query MySQL80"],
       "detectKeywords": ["mysql"]
+    },
+    "redis": {
+      "name": "Redis",
+      "notes": "绿色版 zip 解压安装：安装/启动服务(Redis) + PATH 置顶（需使用支持 Windows Service 的 redis-server.exe 发行包）",
+      "packageFile": "redis-windows-x64.zip",
+      "downloadUrl": "",
+      "sha256": "",
+      "installerType": "zip",
+      "targetDir": "C:\\Program Files\\Redis",
+      "postInstallCommands": [
+        "powershell -NoProfile -ExecutionPolicy Bypass -Command \"$root='C:\\Program Files\\Redis';$exe=Get-ChildItem -Path $root -Recurse -Filter redis-server.exe -ErrorAction SilentlyContinue | Select -First 1 -ExpandProperty FullName; if(-not $exe){throw 'redis-server.exe not found'}; $bin=Split-Path $exe; $path=[Environment]::GetEnvironmentVariable('Path','Machine');$parts=$path -split ';' | Where-Object {$_ -and $_ -ne $bin};$new=($bin)+$parts;[Environment]::SetEnvironmentVariable('Path',($new -join ';'),'Machine');$conf=Join-Path $bin 'redis.windows.conf';$data=Join-Path $root 'data';New-Item -ItemType Directory -Force -Path $data|Out-Null; if(-not(Test-Path $conf)){$lines=@('port 6379',('dir '+$data),('logfile '+(Join-Path $root 'redis.log')),'');Set-Content -Encoding ASCII -Path $conf -Value $lines}; if(-not(Get-Service -Name 'Redis' -ErrorAction SilentlyContinue)){& $exe --service-install $conf; if($LASTEXITCODE -ne 0){throw 'redis service install failed'}}; try{Start-Service -Name Redis -ErrorAction Stop}catch{& $exe --service-start; if($LASTEXITCODE -ne 0){throw 'redis service start failed'}}\""
+      ],
+      "detectCommands": ["sc query Redis"],
+      "detectKeywords": ["redis"]
     }
   }
 }
