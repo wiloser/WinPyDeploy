@@ -4,9 +4,9 @@ import queue
 import platform
 import threading
 from dataclasses import dataclass
+from pathlib import Path
 
 from .models import AppSpec
-from .downloader import ensure_package
 from .runner import CommandRunner
 
 
@@ -48,18 +48,12 @@ class InstallerWorker:
                 self._stop.set()
                 continue
 
-            if app.package_path and not ensure_package(app, self._emit, self._stop.is_set):
-                if not self._stop.is_set():
-                    self._q.put(InstallEvent("failed", app.app_id, "安装包准备失败，停止后续任务"))
-                self._stop.set()
-                continue
-
-            for f in getattr(app, "extra_files", ()):  # backward compatible
-                tmp = AppSpec(app_id=app.app_id, name=app.name, detect_keywords=(), install_commands=(),
-                             package_path=f.path, download_url=f.download_url, sha256=f.sha256)
-                if not ensure_package(tmp, self._emit, self._stop.is_set):
-                    if not self._stop.is_set():
-                        self._q.put(InstallEvent("failed", app.app_id, "安装额外文件准备失败，停止后续任务"))
+            if app.package_path and not Path(app.package_path).exists():
+                self._q.put(InstallEvent("failed", app.app_id, "安装包缺失：请先点击“下载缺失安装包”"))
+                self._stop.set(); continue
+            for f in getattr(app, "extra_files", ()):
+                if not Path(f.path).exists():
+                    self._q.put(InstallEvent("failed", app.app_id, "额外文件缺失：请先点击“下载缺失安装包”"))
                     self._stop.set(); failed = True
                     break
             if failed:

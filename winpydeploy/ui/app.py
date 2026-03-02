@@ -22,6 +22,7 @@ class WinPyDeployApp:
         self.view.set_handlers(
             on_refresh=self.controller.refresh_detection,
             on_select_missing=self.controller.select_all_missing,
+            on_download=self.controller.start_download,
             on_install=self.controller.start_install,
             on_tree_select=self.controller.on_tree_select,
         )

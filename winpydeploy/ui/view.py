@@ -17,10 +17,12 @@ class WinPyDeployView(ttk.Frame):
         toolbar = ttk.Frame(self); toolbar.pack(side=tk.TOP, fill=tk.X, padx=10, pady=(10, 6))
         self.btn_refresh = ttk.Button(toolbar, text="刷新已安装状态")
         self.btn_select_missing = ttk.Button(toolbar, text="选择所有未安装")
-        self.btn_install = ttk.Button(toolbar, text="一键开始安装")
+        self.btn_download = ttk.Button(toolbar, text="下载缺失安装包")
+        self.btn_install = ttk.Button(toolbar, text="开始安装")
         self.btn_refresh.pack(side=tk.LEFT)
         self.btn_select_missing.pack(side=tk.LEFT, padx=(8, 0))
-        self.btn_install.pack(side=tk.LEFT, padx=(20, 0))
+        self.btn_download.pack(side=tk.LEFT, padx=(20, 0))
+        self.btn_install.pack(side=tk.LEFT, padx=(8, 0))
         paned = ttk.Panedwindow(self, orient=tk.VERTICAL)
         paned.pack(side=tk.TOP, fill=tk.BOTH, expand=True, padx=10, pady=(0, 10))
         top, bottom = ttk.Frame(paned), ttk.Frame(paned); paned.add(top, weight=3); paned.add(bottom, weight=2)
@@ -50,9 +52,10 @@ class WinPyDeployView(ttk.Frame):
         self.log_text.configure(yscrollcommand=log_scroll.set); log_scroll.pack(side=tk.RIGHT, fill=tk.Y)
         self.pack(fill=tk.BOTH, expand=True)
 
-    def set_handlers(self, *, on_refresh, on_select_missing, on_install, on_tree_select) -> None:
+    def set_handlers(self, *, on_refresh, on_select_missing, on_download, on_install, on_tree_select) -> None:
         self.btn_refresh.configure(command=on_refresh)
         self.btn_select_missing.configure(command=on_select_missing)
+        self.btn_download.configure(command=on_download)
         self.btn_install.configure(command=on_install)
         self.tree.bind("<<TreeviewSelect>>", on_tree_select)
 
@@ -83,6 +86,7 @@ class WinPyDeployView(ttk.Frame):
     def set_busy(self, busy: bool) -> None:
         s = tk.DISABLED if busy else tk.NORMAL
         self.btn_install.configure(state=s)
+        self.btn_download.configure(state=s)
         self.btn_refresh.configure(state=s)
         self.btn_select_missing.configure(state=s)
 
