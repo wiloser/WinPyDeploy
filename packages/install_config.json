@@ -1,30 +1,43 @@
 {
   "schemaVersion": 1,
-  "schemaHint": "可选字段：installCommands(数组) 直接指定命令；或 packageFile/installerType(msi|exe)/silentArgs 指定离线安装包。",
+  "schemaHint": "可选字段：installCommands(数组) 直接指定命令；或 packageFile/installerType(msi|exe)/silentArgs 指定离线安装包；可选 postInstallCommands(数组) 做安装后配置；可选 detectCommands(数组) 用命令检测是否已安装。",
   "notes": "用于标识安装包与安装策略的元信息（可按需扩展字段）",
   "apps": {
     "node": {
       "name": "Node.js",
       "notes": "离线安装包",
-      "packageFile": "node/node-x64.msi",
+      "packageFile": "node-v24.14.0-x64.msi",
       "installerType": "msi",
+      "detectCommands": ["where node", "node -v"],
       "detectKeywords": ["node", "nodejs"]
     },
     "python": {
       "name": "Python",
-      "notes": "离线安装包（请按实际安装包填写静默参数）",
-      "packageFile": "python/python-3.12.2-amd64.exe",
+      "notes": "离线安装包（静默安装 + PATH 置顶）",
+      "packageFile": "python-3.12.10-amd64.exe",
       "installerType": "exe",
-      "silentArgs": "",
+      "silentArgs": "/quiet InstallAllUsers=1 PrependPath=1 Include_test=0 TargetDir=\"C:\\Python312\"",
+      "postInstallCommands": [
+        "powershell -NoProfile -ExecutionPolicy Bypass -Command \"$p='C:\\Python312';$s='C:\\Python312\\Scripts';$path=[Environment]::GetEnvironmentVariable('Path','Machine');$parts=$path -split ';' | Where-Object {$_ -and $_ -ne $p -and $_ -ne $s};$new=($p,$s)+$parts;[Environment]::SetEnvironmentVariable('Path',($new -join ';'),'Machine')\""
+      ],
+      "detectCommands": ["\"C:\\Python312\\python.exe\" --version"],
       "detectKeywords": ["python"]
     },
     "pycharm": {
       "name": "PyCharm",
-      "notes": "离线安装包（请按实际安装包填写静默参数）",
-      "packageFile": "pycharm/pycharm.exe",
+      "notes": "离线安装包（如需检测已安装，请按实际安装路径补 detectCommands）",
+      "packageFile": "pycharm-2025.3.3.exe",
       "installerType": "exe",
       "silentArgs": "",
       "detectKeywords": ["pycharm", "jetbrains"]
+    },
+    "mysql": {
+      "name": "MySQL",
+      "notes": "离线安装包（如果 mysql 未加入 PATH，请调整 detectCommands）",
+      "packageFile": "mysql-installer.msi",
+      "installerType": "msi",
+      "detectCommands": ["where mysql", "mysql --version"],
+      "detectKeywords": ["mysql"]
     }
   }
 }

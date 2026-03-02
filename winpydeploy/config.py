@@ -48,6 +48,9 @@ def load_catalog(config_path: Path | None = None) -> tuple[AppSpec, ...]:
         if not detect_keywords:
             detect_keywords = (name.lower(), app_id.lower())
 
+        detect = spec.get("detectCommands") or spec.get("detect_commands") or []
+        detect_commands = tuple(str(c) for c in detect if str(c).strip())
+
         commands = spec.get("installCommands") or spec.get("install_commands")
         if not commands:
             commands = _commands_from_package(spec)
@@ -55,12 +58,17 @@ def load_catalog(config_path: Path | None = None) -> tuple[AppSpec, ...]:
             commands = []
         install_commands = tuple(str(c) for c in commands if str(c).strip())
 
+        post = spec.get("postInstallCommands") or spec.get("post_install_commands") or []
+        post_install_commands = tuple(str(c) for c in post if str(c).strip())
+
         catalog.append(
             AppSpec(
                 app_id=str(app_id),
                 name=name,
                 detect_keywords=detect_keywords,
                 install_commands=install_commands,
+                detect_commands=detect_commands,
+                post_install_commands=post_install_commands,
                 notes=notes,
             )
         )

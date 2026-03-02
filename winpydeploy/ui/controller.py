@@ -27,31 +27,20 @@ class WinPyDeployController:
         self._spec_by_id = {a.app_id: a for a in self._catalog}
         self._installed = detect_installed_apps(self._catalog)
         self.view.rebuild_tree(self._catalog, self._installed, self._selected)
-        self.view.log("检测完成。双击条目可切换选择。")
+        self.view.log("检测完成。")
 
     def on_tree_select(self, _evt=None) -> None:
         self._selected = set(self.view.selection())
-
-    def on_tree_double_click(self, evt) -> None:
-        item = self.view.tree.identify_row(evt.y)
-        if not item:
-            return
-        current = set(self.view.selection())
-        (current.remove(item) if item in current else current.add(item))
-        self.view.set_selection(list(current)); self._selected = current
 
     def select_all_missing(self) -> None:
         missing = [a.app_id for a in self._catalog if not self._installed.get(a.app_id, False)]
         self.view.set_selection(missing); self._selected = set(missing)
 
-    def clear_selection(self) -> None:
-        self.view.clear_selection(); self._selected.clear()
-
     def start_install(self) -> None:
         if self._worker_thread and self._worker_thread.is_alive():
-            messagebox.showinfo("提示", "正在安装中，请先取消或等待完成。"); return
+            messagebox.showinfo("提示", "正在安装中，请等待完成。"); return
         if not self._selected:
-            messagebox.showinfo("提示", "请先选择要安装的软件（双击条目或框选）。"); return
+            messagebox.showinfo("提示", "请先选择要安装的软件（点击/框选）。"); return
 
         to_install: list[AppSpec] = []
         for app_id in list(self._selected):
@@ -70,9 +59,6 @@ class WinPyDeployController:
         self._worker = InstallerWorker(self._event_q)
         self._worker_thread = threading.Thread(target=self._worker.install, args=(to_install,), daemon=True)
         self._worker_thread.start()
-
-    def cancel_install(self) -> None:
-        self._worker.stop(); self.view.log("已发出取消信号（将停止后续任务）。")
 
     def handle_event(self, ev: InstallEvent) -> None:
         if ev.kind in {"starting", "log"} and ev.message:

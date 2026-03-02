@@ -9,4 +9,6 @@ class AppSpec:
     name: str
     detect_keywords: tuple[str, ...]
     install_commands: tuple[str, ...]
+    detect_commands: tuple[str, ...] = ()
+    post_install_commands: tuple[str, ...] = ()
     notes: str = ""
