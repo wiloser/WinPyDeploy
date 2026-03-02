@@ -41,12 +41,9 @@ def apply_pip_bootstrap(spec: dict, extra_files: tuple[ExtraFile, ...], post: li
     pkg = str(packages_dir().resolve())
     pth = (
         "powershell -NoProfile -ExecutionPolicy Bypass -Command "
-        f"\"$r='{target_dir}';$p=Join-Path $r 'python312._pth';"
-        "New-Item -ItemType Directory -Force -Path (Join-Path $r 'Lib\\site-packages') | Out-Null;"
-        "if(Test-Path $p){$l=Get-Content $p;"
-        "$l=$l|ForEach-Object{if($_ -match '^#?import site$'){'import site'}else{$_}};"
-        "if(-not ($l -contains 'Lib\\site-packages')){$l=@('Lib\\site-packages')+$l};"
-        "Set-Content -Encoding ASCII -Path $p -Value $l}\""
+            f"\"$r='{target_dir}';$p=Join-Path $r 'python312._pth';"
+            "New-Item -ItemType Directory -Force -Path (Join-Path $r 'Lib\\site-packages') | Out-Null;"
+            "if(Test-Path $p){$bak=($p+'.bak');if(-not(Test-Path $bak)){Rename-Item -Force -Path $p -NewName (Split-Path $bak -Leaf)}}\""
     )
     gp = f'"{target_dir}\\python.exe" "{get_pip}" --no-index --find-links "{pkg}"'
     return tuple([pth, gp] + post)

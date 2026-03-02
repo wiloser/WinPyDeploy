@@ -7,7 +7,7 @@
       "name": "Node.js",
       "notes": "离线安装包",
       "packageFile": "node-v24.14.0-x64.msi",
-      "downloadUrl": "https://nodejs.org/dist/v24.14.0/node-v24.14.0-arm64.msi",
+      "downloadUrl": "https://nodejs.org/dist/v24.14.0/node-v24.14.0-x64.msi",
       "sha256": "",
       "installerType": "msi",
       "detectCommands": ["where node", "node -v"],
