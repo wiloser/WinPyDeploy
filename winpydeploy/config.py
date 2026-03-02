@@ -24,6 +24,16 @@ def _commands_from_package(spec: dict) -> list[str]:
     path = _safe_package_path(str(package_file))
     if installer_type == "msi":
         return [f'msiexec /i "{path}" /qn']
+    if installer_type == "zip":
+        target_dir = str(spec.get("targetDir") or spec.get("target_dir") or r"C:\\Python312").strip()
+        ps = (
+            "powershell -NoProfile -ExecutionPolicy Bypass -Command "
+            f"\"$src='{path}';$dst='{target_dir}';"
+            "Unblock-File -LiteralPath $src -ErrorAction SilentlyContinue;"
+            "New-Item -ItemType Directory -Force -Path $dst | Out-Null;"
+            "Expand-Archive -LiteralPath $src -DestinationPath $dst -Force\""
+        )
+        return [ps]
     if installer_type == "exe":
         return [f'"{path}" {silent_args}'.rstrip()]
     return [f'"{path}" {silent_args}'.rstrip()]

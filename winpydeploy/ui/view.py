@@ -66,6 +66,7 @@ class WinPyDeployView(ttk.Frame):
         installed: dict[str, bool],
         selected: set[str],
         package_ok: dict[str, bool],
+        errors: dict[str, str],
     ) -> None:
         self.tree.delete(*self.tree.get_children())
         valid_ids = {a.app_id for a in catalog}
@@ -73,8 +74,10 @@ class WinPyDeployView(ttk.Frame):
             is_installed = installed.get(app.app_id, False)
             ok = package_ok.get(app.app_id, True)
             status = "已安装" if is_installed else ("未安装" if ok else "未安装(缺包)")
+            err = (errors.get(app.app_id) or "").strip()
+            notes = (err[:120] + "…") if len(err) > 120 else (err or app.notes)
             tags = () if is_installed else ("missing",)
-            self.tree.insert("", tk.END, iid=app.app_id, values=(app.app_id, app.name, status, app.notes), tags=tags)
+            self.tree.insert("", tk.END, iid=app.app_id, values=(app.app_id, app.name, status, notes), tags=tags)
         self.tree.selection_set([i for i in selected if i in valid_ids])
 
     def set_busy(self, busy: bool) -> None:

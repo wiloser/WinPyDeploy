@@ -22,6 +22,7 @@ class WinPyDeployController:
         self._spec_by_id: dict[str, AppSpec] = {}
         self._installed: dict[str, bool] = {}
         self._package_ok: dict[str, bool] = {}
+        self._errors: dict[str, str] = {}
         self._selected: set[str] = set()
 
     def refresh_detection(self) -> None:
@@ -31,7 +32,8 @@ class WinPyDeployController:
         self._package_ok = {
             a.app_id: (not a.package_path or Path(a.package_path).exists()) for a in self._catalog
         }
-        self.view.rebuild_tree(self._catalog, self._installed, self._selected, self._package_ok)
+        self._errors = {k: v for k, v in self._errors.items() if k in self._spec_by_id}
+        self.view.rebuild_tree(self._catalog, self._installed, self._selected, self._package_ok, self._errors)
         self.view.log("检测完成。")
 
     def on_tree_select(self, _evt=None) -> None:
@@ -66,21 +68,28 @@ class WinPyDeployController:
         self._worker_thread.start()
 
     def handle_event(self, ev: InstallEvent) -> None:
-        if ev.kind in {"starting", "log"} and ev.message:
-            self.view.log(ev.message)
+        if ev.kind == "starting":
+            self._errors.pop(ev.app_id, None)
+            if ev.message:
+                self.view.log(ev.message)
         elif ev.kind == "progress" and ev.message in {"20", "60", "100"}:
             app = self._spec_by_id.get(ev.app_id)
             if app:
                 self.view.log(f"{app.name} ... {ev.message}%")
         elif ev.kind == "success":
             self._installed[ev.app_id] = True
-            self.view.rebuild_tree(self._catalog, self._installed, self._selected, self._package_ok)
+            self._errors.pop(ev.app_id, None)
+            self.view.rebuild_tree(self._catalog, self._installed, self._selected, self._package_ok, self._errors)
         elif ev.kind == "skipped":
             app = self._spec_by_id.get(ev.app_id)
             if app:
                 self.view.log(f"已跳过：{app.name}")
         elif ev.kind == "failed":
             if ev.message:
+                self._errors[ev.app_id] = ev.message
                 self.view.log(ev.message)
+                self.view.rebuild_tree(self._catalog, self._installed, self._selected, self._package_ok, self._errors)
+        elif ev.kind == "log" and ev.message:
+            self.view.log(ev.message)
         elif ev.kind == "all_done":
             self.view.set_busy(False); self.view.log("全部任务已结束。")

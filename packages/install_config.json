@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "schemaHint": "可选字段：installCommands(数组) 直接指定命令；或 packageFile/installerType(msi|exe)/silentArgs 指定离线安装包；可选 downloadUrl/sha256 用于缺包时自动下载与校验；可选 postInstallCommands(数组) 做安装后配置；可选 detectCommands(数组) 用命令检测是否已安装。",
+  "schemaHint": "可选字段：installCommands(数组) 直接指定命令；或 packageFile/installerType(msi|exe|zip)/silentArgs 指定离线安装包；zip 可配 targetDir 指定解压目录；可选 downloadUrl/sha256 用于缺包时自动下载与校验；可选 postInstallCommands(数组) 做安装后配置；可选 detectCommands(数组) 用命令检测是否已安装。",
   "notes": "用于标识安装包与安装策略的元信息（可按需扩展字段）",
   "apps": {
     "node": {
@@ -15,12 +15,12 @@
     },
     "python": {
       "name": "Python",
-      "notes": "离线安装包（静默安装 + PATH 置顶）",
-      "packageFile": "python-3.12.10-amd64.exe",
-      "downloadUrl": "http://127.0.0.1:8000/packages/python-3.12.10-amd64.exe",
+      "notes": "绿色版（embeddable zip）解压安装 + PATH 置顶（不含 pip/venv）",
+      "packageFile": "python-3.12.10-embed-amd64.zip",
+      "downloadUrl": "https://www.python.org/ftp/python/3.12.10/python-3.12.10-embed-amd64.zip",
       "sha256": "",
-      "installerType": "exe",
-      "silentArgs": "/quiet InstallAllUsers=1 PrependPath=1 Include_test=0 TargetDir=\"C:\\Program Files\\Python312\"",
+      "installerType": "zip",
+      "targetDir": "C:\\Program Files\\Python312",
       "postInstallCommands": [
         "powershell -NoProfile -ExecutionPolicy Bypass -Command \"$p='C:\\Program Files\\Python312';$s='C:\\Program Files\\Python312\\Scripts';$path=[Environment]::GetEnvironmentVariable('Path','Machine');$parts=$path -split ';' | Where-Object {$_ -and $_ -ne $p -and $_ -ne $s};$new=($p,$s)+$parts;[Environment]::SetEnvironmentVariable('Path',($new -join ';'),'Machine')\""
       ],
