@@ -3,9 +3,14 @@ from __future__ import annotations
 import queue
 import tkinter as tk
 
-from ..installer import InstallEvent
-from .controller import WinPyDeployController
-from .view import WinPyDeployView
+try:
+    from ..installer import InstallEvent
+    from .controller import WinPyDeployController
+    from .view import WinPyDeployView
+except ImportError as exc:  # pragma: no cover
+    raise SystemExit(
+        "请在项目根目录运行: `./.venv/bin/python main.py` 或 `./.venv/bin/python -m winpydeploy`"
+    ) from exc
 
 
 class WinPyDeployApp:
@@ -34,3 +39,9 @@ class WinPyDeployApp:
             pass
         finally:
             self.root.after(100, self._drain_events)
+
+
+if __name__ == "__main__":
+    raise SystemExit(
+        "请在项目根目录运行: `./.venv/bin/python main.py` 或 `./.venv/bin/python -m winpydeploy`"
+    )

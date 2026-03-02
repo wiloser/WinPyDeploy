@@ -9,5 +9,7 @@ build/
 .venv/
 venv/
 env/
+packages/*
+!packages/install_config.json
 .DS_Store
 *.log

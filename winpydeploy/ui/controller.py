@@ -4,9 +4,10 @@ import queue
 import threading
 from tkinter import messagebox
 
+from ..config import load_catalog
 from ..detection import detect_installed_apps
 from ..installer import InstallEvent, InstallerWorker
-from ..models import CATALOG, AppSpec
+from ..models import AppSpec
 from .view import WinPyDeployView
 
 
@@ -16,13 +17,16 @@ class WinPyDeployController:
         self._event_q = event_q
         self._worker = InstallerWorker(event_q)
         self._worker_thread: threading.Thread | None = None
-        self._spec_by_id = {a.app_id: a for a in CATALOG}
+        self._catalog: tuple[AppSpec, ...] = ()
+        self._spec_by_id: dict[str, AppSpec] = {}
         self._installed: dict[str, bool] = {}
         self._selected: set[str] = set()
 
     def refresh_detection(self) -> None:
-        self._installed = detect_installed_apps(CATALOG)
-        self.view.rebuild_tree(CATALOG, self._installed, self._selected)
+        self._catalog = load_catalog()
+        self._spec_by_id = {a.app_id: a for a in self._catalog}
+        self._installed = detect_installed_apps(self._catalog)
+        self.view.rebuild_tree(self._catalog, self._installed, self._selected)
         self.view.log("检测完成。双击条目可切换选择。")
 
     def on_tree_select(self, _evt=None) -> None:
@@ -37,7 +41,7 @@ class WinPyDeployController:
         self.view.set_selection(list(current)); self._selected = current
 
     def select_all_missing(self) -> None:
-        missing = [a.app_id for a in CATALOG if not self._installed.get(a.app_id, False)]
+        missing = [a.app_id for a in self._catalog if not self._installed.get(a.app_id, False)]
         self.view.set_selection(missing); self._selected = set(missing)
 
     def clear_selection(self) -> None:
@@ -51,10 +55,13 @@ class WinPyDeployController:
 
         to_install: list[AppSpec] = []
         for app_id in list(self._selected):
+            spec = self._spec_by_id.get(app_id)
+            if not spec:
+                continue
             if self._installed.get(app_id, False):
-                self.view.log(f"跳过已安装：{self._spec_by_id[app_id].name}")
+                self.view.log(f"跳过已安装：{spec.name}")
             else:
-                to_install.append(self._spec_by_id[app_id])
+                to_install.append(spec)
         if not to_install:
             messagebox.showinfo("提示", "选择的软件都已安装，无需执行。"); return
 
@@ -76,7 +83,7 @@ class WinPyDeployController:
                 self.view.log(f"{app.name} ... {ev.message}%")
         elif ev.kind == "success":
             self._installed[ev.app_id] = True
-            self.view.rebuild_tree(CATALOG, self._installed, self._selected)
+            self.view.rebuild_tree(self._catalog, self._installed, self._selected)
         elif ev.kind == "skipped":
             app = self._spec_by_id.get(ev.app_id)
             if app:

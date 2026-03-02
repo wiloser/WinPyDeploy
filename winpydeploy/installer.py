@@ -32,6 +32,8 @@ class InstallerWorker:
 
             self._q.put(InstallEvent("starting", app.app_id, f"开始安装：{app.name}"))
             self._q.put(InstallEvent("log", app.app_id, "(开发环境模拟) 将执行命令："))
+            if not app.install_commands:
+                self._q.put(InstallEvent("log", app.app_id, "  (未配置 installCommands 或 packageFile)"))
             for cmd in app.install_commands:
                 self._q.put(InstallEvent("log", app.app_id, f"  {cmd}"))
 
