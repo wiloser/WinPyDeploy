@@ -3,29 +3,28 @@
   "schemaHint": "可选字段：installCommands(数组) 直接指定命令；或 packageFile/installerType(msi|exe)/silentArgs 指定离线安装包。",
   "notes": "用于标识安装包与安装策略的元信息（可按需扩展字段）",
   "apps": {
-    "7zip": {
-      "name": "7-Zip",
-      "notes": "解压缩工具",
-      "packageFile": "7zip/7z-x64.exe",
-      "installerType": "exe",
-      "silentArgs": "/S",
-      "detectKeywords": ["7-zip", "7zip"]
+    "node": {
+      "name": "Node.js",
+      "notes": "离线安装包",
+      "packageFile": "node/node-x64.msi",
+      "installerType": "msi",
+      "detectKeywords": ["node", "nodejs"]
     },
-    "git": {
-      "name": "Git",
-      "notes": "版本控制（请按安装包填写静默参数）",
-      "packageFile": "git/Git-x64.exe",
+    "python": {
+      "name": "Python",
+      "notes": "离线安装包（请按实际安装包填写静默参数）",
+      "packageFile": "python/python-3.12.2-amd64.exe",
       "installerType": "exe",
       "silentArgs": "",
-      "detectKeywords": ["git"]
+      "detectKeywords": ["python"]
     },
-    "vscode": {
-      "name": "Visual Studio Code",
-      "notes": "编辑器（请按安装包填写静默参数）",
-      "packageFile": "vscode/VSCode-x64.exe",
+    "pycharm": {
+      "name": "PyCharm",
+      "notes": "离线安装包（请按实际安装包填写静默参数）",
+      "packageFile": "pycharm/pycharm.exe",
       "installerType": "exe",
       "silentArgs": "",
-      "detectKeywords": ["visual studio code", "vscode"]
+      "detectKeywords": ["pycharm", "jetbrains"]
     }
   }
 }

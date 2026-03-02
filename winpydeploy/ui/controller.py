@@ -88,5 +88,8 @@ class WinPyDeployController:
             app = self._spec_by_id.get(ev.app_id)
             if app:
                 self.view.log(f"已跳过：{app.name}")
+        elif ev.kind == "failed":
+            if ev.message:
+                self.view.log(ev.message)
         elif ev.kind == "all_done":
             self.view.set_busy(False); self.view.log("全部任务已结束。")
