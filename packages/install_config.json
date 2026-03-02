@@ -20,11 +20,11 @@
       "downloadUrl": "http://127.0.0.1:8000/packages/python-3.12.10-amd64.exe",
       "sha256": "",
       "installerType": "exe",
-      "silentArgs": "/quiet InstallAllUsers=1 PrependPath=1 Include_test=0 TargetDir=\"C:\\Python312\"",
+      "silentArgs": "/quiet InstallAllUsers=1 PrependPath=1 Include_test=0 TargetDir=\"C:\\Program Files\\Python312\"",
       "postInstallCommands": [
-        "powershell -NoProfile -ExecutionPolicy Bypass -Command \"$p='C:\\Python312';$s='C:\\Python312\\Scripts';$path=[Environment]::GetEnvironmentVariable('Path','Machine');$parts=$path -split ';' | Where-Object {$_ -and $_ -ne $p -and $_ -ne $s};$new=($p,$s)+$parts;[Environment]::SetEnvironmentVariable('Path',($new -join ';'),'Machine')\""
+        "powershell -NoProfile -ExecutionPolicy Bypass -Command \"$p='C:\\Program Files\\Python312';$s='C:\\Program Files\\Python312\\Scripts';$path=[Environment]::GetEnvironmentVariable('Path','Machine');$parts=$path -split ';' | Where-Object {$_ -and $_ -ne $p -and $_ -ne $s};$new=($p,$s)+$parts;[Environment]::SetEnvironmentVariable('Path',($new -join ';'),'Machine')\""
       ],
-      "detectCommands": ["\"C:\\Python312\\python.exe\" --version"],
+      "detectCommands": ["\"C:\\Program Files\\Python312\\python.exe\" --version"],
       "detectKeywords": ["python"]
     },
     "pycharm": {
