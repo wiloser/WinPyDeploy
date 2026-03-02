@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import queue
 import threading
+from pathlib import Path
 from tkinter import messagebox
 
 from ..config import load_catalog
@@ -20,13 +21,17 @@ class WinPyDeployController:
         self._catalog: tuple[AppSpec, ...] = ()
         self._spec_by_id: dict[str, AppSpec] = {}
         self._installed: dict[str, bool] = {}
+        self._package_ok: dict[str, bool] = {}
         self._selected: set[str] = set()
 
     def refresh_detection(self) -> None:
         self._catalog = load_catalog()
         self._spec_by_id = {a.app_id: a for a in self._catalog}
         self._installed = detect_installed_apps(self._catalog)
-        self.view.rebuild_tree(self._catalog, self._installed, self._selected)
+        self._package_ok = {
+            a.app_id: (not a.package_path or Path(a.package_path).exists()) for a in self._catalog
+        }
+        self.view.rebuild_tree(self._catalog, self._installed, self._selected, self._package_ok)
         self.view.log("检测完成。")
 
     def on_tree_select(self, _evt=None) -> None:
@@ -69,7 +74,7 @@ class WinPyDeployController:
                 self.view.log(f"{app.name} ... {ev.message}%")
         elif ev.kind == "success":
             self._installed[ev.app_id] = True
-            self.view.rebuild_tree(self._catalog, self._installed, self._selected)
+            self.view.rebuild_tree(self._catalog, self._installed, self._selected, self._package_ok)
         elif ev.kind == "skipped":
             app = self._spec_by_id.get(ev.app_id)
             if app:

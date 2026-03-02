@@ -61,12 +61,22 @@ def load_catalog(config_path: Path | None = None) -> tuple[AppSpec, ...]:
         post = spec.get("postInstallCommands") or spec.get("post_install_commands") or []
         post_install_commands = tuple(str(c) for c in post if str(c).strip())
 
+        package_path = ""
+        package_file = spec.get("packageFile")
+        if package_file:
+            package_path = _safe_package_path(str(package_file))
+        download_url = str(spec.get("downloadUrl") or spec.get("download_url") or "").strip()
+        sha256 = str(spec.get("sha256") or "").strip()
+
         catalog.append(
             AppSpec(
                 app_id=str(app_id),
                 name=name,
                 detect_keywords=detect_keywords,
                 install_commands=install_commands,
+                package_path=package_path,
+                download_url=download_url,
+                sha256=sha256,
                 detect_commands=detect_commands,
                 post_install_commands=post_install_commands,
                 notes=notes,

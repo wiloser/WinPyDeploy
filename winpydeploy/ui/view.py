@@ -60,12 +60,19 @@ class WinPyDeployView(ttk.Frame):
         ts = time.strftime("%H:%M:%S")
         self.log_text.insert(tk.END, f"[{ts}] {line}\n"); self.log_text.see(tk.END)
 
-    def rebuild_tree(self, catalog: tuple[AppSpec, ...], installed: dict[str, bool], selected: set[str]) -> None:
+    def rebuild_tree(
+        self,
+        catalog: tuple[AppSpec, ...],
+        installed: dict[str, bool],
+        selected: set[str],
+        package_ok: dict[str, bool],
+    ) -> None:
         self.tree.delete(*self.tree.get_children())
         valid_ids = {a.app_id for a in catalog}
         for app in catalog:
             is_installed = installed.get(app.app_id, False)
-            status = "已安装" if is_installed else "未安装"
+            ok = package_ok.get(app.app_id, True)
+            status = "已安装" if is_installed else ("未安装" if ok else "未安装(缺包)")
             tags = () if is_installed else ("missing",)
             self.tree.insert("", tk.END, iid=app.app_id, values=(app.app_id, app.name, status, app.notes), tags=tags)
         self.tree.selection_set([i for i in selected if i in valid_ids])

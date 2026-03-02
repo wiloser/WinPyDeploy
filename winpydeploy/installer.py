@@ -6,6 +6,7 @@ import threading
 from dataclasses import dataclass
 
 from .models import AppSpec
+from .downloader import ensure_package
 from .runner import CommandRunner
 
 
@@ -24,6 +25,7 @@ class InstallerWorker:
         def emit(kind: str, app_id: str, message: str) -> None:
             self._q.put(InstallEvent(kind, app_id, message))
 
+        self._emit = emit
         self._runner = CommandRunner(emit)
 
     def stop(self) -> None:
@@ -43,6 +45,12 @@ class InstallerWorker:
             self._q.put(InstallEvent("log", app.app_id, f"({mode}) 将执行命令："))
             if not app.install_commands:
                 self._q.put(InstallEvent("failed", app.app_id, "未配置 installCommands 或 packageFile，无法安装"))
+                self._stop.set()
+                continue
+
+            if app.package_path and not ensure_package(app, self._emit, self._stop.is_set):
+                if not self._stop.is_set():
+                    self._q.put(InstallEvent("failed", app.app_id, "安装包准备失败，停止后续任务"))
                 self._stop.set()
                 continue
 
