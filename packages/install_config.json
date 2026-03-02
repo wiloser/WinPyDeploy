@@ -40,8 +40,8 @@
     "mysql": {
       "name": "MySQL",
       "notes": "离线安装包（如果 mysql 未加入 PATH，请调整 detectCommands）",
-      "packageFile": "mysql-installer.msi",
-      "downloadUrl": "http://127.0.0.1:8000/packages/mysql-installer.msi",
+      "packageFile": "mysql-installer-community-8.0.45.0.msi",
+      "downloadUrl": "http://127.0.0.1:8000/packages/mysql-installer-community-8.0.45.0.msi",
       "sha256": "",
       "installerType": "msi",
       "detectCommands": ["where mysql", "mysql --version"],
