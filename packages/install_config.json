@@ -42,7 +42,7 @@
       "name": "PyCharm",
       "notes": "离线安装包（如需检测已安装，请按实际安装路径补 detectCommands）",
       "packageFile": "pycharm-2025.3.3.exe",
-      "downloadUrl": "https://www.jetbrains.com/pycharm/download/download-thanks.html?platform=windows",
+      "downloadUrl": "https://download.jetbrains.com/python/pycharm-2025.3.3.exe",
       "sha256": "",
       "installerType": "exe",
       "silentArgs": "",
@@ -50,12 +50,16 @@
     },
     "mysql": {
       "name": "MySQL",
-      "notes": "离线安装包（如果 mysql 未加入 PATH，请调整 detectCommands）",
-      "packageFile": "mysql-installer-community-8.0.45.0.msi",
-      "downloadUrl": "https://dev.mysql.com/get/Downloads/MySQLInstaller/mysql-installer-community-8.0.45.0.msi",
+      "notes": "绿色版 zip 解压安装：初始化 data + 安装/启动服务(MySQL80) + 写死 root 密码",
+      "packageFile": "mysql-8.0.45-winx64.zip",
+      "downloadUrl": "https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-8.0.45-winx64.zip",
       "sha256": "",
-      "installerType": "msi",
-      "detectCommands": ["where mysql", "mysql --version"],
+      "installerType": "zip",
+      "targetDir": "C:\\Program Files\\MySQL",
+      "postInstallCommands": [
+        "powershell -NoProfile -ExecutionPolicy Bypass -Command \"$root='C:\\Program Files\\MySQL';$pw='123456';$d=Get-ChildItem -Directory $root -ErrorAction SilentlyContinue|?{$_.Name -like 'mysql-*winx64*'}|select -First 1;$base=if($d){$d.FullName}else{$root};$bin=Join-Path $base 'bin';$mysqld=Join-Path $bin 'mysqld.exe';$mysqladmin=Join-Path $bin 'mysqladmin.exe';$data=Join-Path $base 'data';New-Item -ItemType Directory -Force -Path $data|Out-Null;$ini=Join-Path $base 'my.ini';if(-not(Test-Path $ini)){$lines=@('[mysqld]',('basedir='+$base),('datadir='+$data),'port=3306','');Set-Content -Encoding ASCII -Path $ini -Value $lines};if(-not(Test-Path (Join-Path $data 'mysql'))){& $mysqld --initialize-insecure --basedir=\"$base\" --datadir=\"$data\";if($LASTEXITCODE -ne 0){throw 'mysqld init failed'}};if(-not(Get-Service -Name 'MySQL80' -ErrorAction SilentlyContinue)){& $mysqld --install MySQL80 --defaults-file=\"$ini\";if($LASTEXITCODE -ne 0){throw 'service install failed'}};try{Start-Service -Name MySQL80 -ErrorAction Stop}catch{};Start-Sleep -Seconds 2;& $mysqladmin -u root status 2>$null;if($LASTEXITCODE -eq 0){& $mysqladmin -u root password $pw;if($LASTEXITCODE -ne 0){throw 'set password failed'}}\""
+      ],
+      "detectCommands": ["sc query MySQL80"],
       "detectKeywords": ["mysql"]
     }
   }

@@ -48,6 +48,8 @@ class InstallerWorker:
                 self._stop.set()
                 continue
 
+            failed = False
+
             if app.package_path and not Path(app.package_path).exists():
                 self._q.put(InstallEvent("failed", app.app_id, "安装包缺失：请先点击“下载缺失安装包”"))
                 self._stop.set(); continue
@@ -58,8 +60,6 @@ class InstallerWorker:
                     break
             if failed:
                 continue
-
-            failed = False
             for cmd in app.install_commands:
                 if self._stop.is_set():
                     break
