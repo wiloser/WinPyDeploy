@@ -11,5 +11,7 @@ venv/
 env/
 packages/*
 !packages/install_config.json
+!packages/get-pip.py
 .DS_Store
 *.log
+out/

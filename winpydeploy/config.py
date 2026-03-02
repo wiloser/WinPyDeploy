@@ -1,11 +1,9 @@
 from __future__ import annotations
-
 import json
 from pathlib import Path
-
 from .models import AppSpec
 from .paths import install_config_path, packages_dir
-
+from .spec_tools import apply_pip_bootstrap, parse_extra_files
 
 def _safe_package_path(package_file: str) -> str:
     base = packages_dir().resolve()
@@ -69,7 +67,7 @@ def load_catalog(config_path: Path | None = None) -> tuple[AppSpec, ...]:
         install_commands = tuple(str(c) for c in commands if str(c).strip())
 
         post = spec.get("postInstallCommands") or spec.get("post_install_commands") or []
-        post_install_commands = tuple(str(c) for c in post if str(c).strip())
+        post_install_commands = [str(c) for c in post if str(c).strip()]
 
         package_path = ""
         package_file = spec.get("packageFile")
@@ -77,6 +75,9 @@ def load_catalog(config_path: Path | None = None) -> tuple[AppSpec, ...]:
             package_path = _safe_package_path(str(package_file))
         download_url = str(spec.get("downloadUrl") or spec.get("download_url") or "").strip()
         sha256 = str(spec.get("sha256") or "").strip()
+
+        extra_files = parse_extra_files(spec, _safe_package_path)
+        post_install_commands_t = apply_pip_bootstrap(spec, extra_files, post_install_commands)
 
         catalog.append(
             AppSpec(
@@ -87,8 +88,9 @@ def load_catalog(config_path: Path | None = None) -> tuple[AppSpec, ...]:
                 package_path=package_path,
                 download_url=download_url,
                 sha256=sha256,
+                extra_files=extra_files,
                 detect_commands=detect_commands,
-                post_install_commands=post_install_commands,
+                post_install_commands=post_install_commands_t,
                 notes=notes,
             )
         )

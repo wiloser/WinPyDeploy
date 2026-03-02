@@ -35,6 +35,14 @@ def _bundled_install_config() -> Path | None:
     return p if p.exists() else None
 
 
+def _bundled_packages_file(name: str) -> Path | None:
+    base = getattr(sys, "_MEIPASS", None)
+    if not base:
+        return None
+    p = (Path(base) / "packages" / name).resolve()
+    return p if p.exists() else None
+
+
 def ensure_install_config() -> Path:
     ensure_packages_dir()
     path = install_config_path()
@@ -50,4 +58,10 @@ def ensure_install_config() -> Path:
             "apps": {},
         }
         path.write_text(json.dumps(default_config, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+    pip_boot = packages_dir() / "get-pip.py"
+    if not pip_boot.exists():
+        bundled = _bundled_packages_file("get-pip.py")
+        if bundled:
+            shutil.copyfile(bundled, pip_boot)
     return path

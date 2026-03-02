@@ -6,9 +6,11 @@ block_cipher = None
 
 root = Path(__file__).resolve().parent
 
-# Bundle a default config; runtime will copy it into ./packages/ on first run
-# if the user doesn't already have one.
-datas = [(str(root / "packages" / "install_config.json"), "packages")]
+# Bundle defaults; runtime will copy them into ./packages/ on first run
+datas = [
+    (str(root / "packages" / "install_config.json"), "packages"),
+    (str(root / "packages" / "get-pip.py"), "packages"),
+]
 
 
 a = Analysis(

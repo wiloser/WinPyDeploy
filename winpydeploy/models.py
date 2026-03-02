@@ -4,6 +4,13 @@ from dataclasses import dataclass
 
 
 @dataclass(frozen=True)
+class ExtraFile:
+    path: str
+    download_url: str = ""
+    sha256: str = ""
+
+
+@dataclass(frozen=True)
 class AppSpec:
     app_id: str
     name: str
@@ -12,6 +19,7 @@ class AppSpec:
     package_path: str = ""
     download_url: str = ""
     sha256: str = ""
+    extra_files: tuple[ExtraFile, ...] = ()
     detect_commands: tuple[str, ...] = ()
     post_install_commands: tuple[str, ...] = ()
     notes: str = ""

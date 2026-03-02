@@ -54,6 +54,17 @@ class InstallerWorker:
                 self._stop.set()
                 continue
 
+            for f in getattr(app, "extra_files", ()):  # backward compatible
+                tmp = AppSpec(app_id=app.app_id, name=app.name, detect_keywords=(), install_commands=(),
+                             package_path=f.path, download_url=f.download_url, sha256=f.sha256)
+                if not ensure_package(tmp, self._emit, self._stop.is_set):
+                    if not self._stop.is_set():
+                        self._q.put(InstallEvent("failed", app.app_id, "安装额外文件准备失败，停止后续任务"))
+                    self._stop.set(); failed = True
+                    break
+            if failed:
+                continue
+
             failed = False
             for cmd in app.install_commands:
                 if self._stop.is_set():

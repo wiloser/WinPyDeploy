@@ -29,9 +29,9 @@ class WinPyDeployController:
         self._catalog = load_catalog()
         self._spec_by_id = {a.app_id: a for a in self._catalog}
         self._installed = detect_installed_apps(self._catalog)
-        self._package_ok = {
-            a.app_id: (not a.package_path or Path(a.package_path).exists()) for a in self._catalog
-        }
+        self._package_ok = {a.app_id: ((not a.package_path or Path(a.package_path).exists()) and all(
+            Path(f.path).exists() for f in getattr(a, "extra_files", ())
+        )) for a in self._catalog}
         self._errors = {k: v for k, v in self._errors.items() if k in self._spec_by_id}
         self.view.rebuild_tree(self._catalog, self._installed, self._selected, self._package_ok, self._errors)
         self.view.log("检测完成。")

@@ -15,16 +15,27 @@
     },
     "python": {
       "name": "Python",
-      "notes": "绿色版（embeddable zip）解压安装 + PATH 置顶（不含 pip/venv）",
+      "notes": "绿色版（embeddable zip）解压安装 + PATH 置顶；可选 pipBootstrap + extraFiles（get-pip.py/whl）实现离线 pip",
       "packageFile": "python-3.12.10-embed-amd64.zip",
       "downloadUrl": "https://www.python.org/ftp/python/3.12.10/python-3.12.10-embed-amd64.zip",
       "sha256": "",
       "installerType": "zip",
       "targetDir": "C:\\Program Files\\Python312",
+      "pipBootstrap": true,
+      "extraFiles": [
+        {
+          "file": "get-pip.py",
+          "downloadUrl": "",
+          "sha256": ""
+        }
+      ],
       "postInstallCommands": [
         "powershell -NoProfile -ExecutionPolicy Bypass -Command \"$p='C:\\Program Files\\Python312';$s='C:\\Program Files\\Python312\\Scripts';$path=[Environment]::GetEnvironmentVariable('Path','Machine');$parts=$path -split ';' | Where-Object {$_ -and $_ -ne $p -and $_ -ne $s};$new=($p,$s)+$parts;[Environment]::SetEnvironmentVariable('Path',($new -join ';'),'Machine')\""
       ],
-      "detectCommands": ["\"C:\\Program Files\\Python312\\python.exe\" --version"],
+      "detectCommands": [
+        "\"C:\\Program Files\\Python312\\python.exe\" --version",
+        "\"C:\\Program Files\\Python312\\python.exe\" -m pip --version"
+      ],
       "detectKeywords": ["python"]
     },
     "pycharm": {
