@@ -1,0 +1,36 @@
+from __future__ import annotations
+
+import queue
+import tkinter as tk
+
+from ..installer import InstallEvent
+from .controller import WinPyDeployController
+from .view import WinPyDeployView
+
+
+class WinPyDeployApp:
+    def __init__(self, root: tk.Tk):
+        self.root = root
+        self._event_q: "queue.Queue[InstallEvent]" = queue.Queue()
+        self.view = WinPyDeployView(root)
+        self.controller = WinPyDeployController(self.view, self._event_q)
+        self.view.set_handlers(
+            on_refresh=self.controller.refresh_detection,
+            on_select_missing=self.controller.select_all_missing,
+            on_clear=self.controller.clear_selection,
+            on_install=self.controller.start_install,
+            on_cancel=self.controller.cancel_install,
+            on_tree_select=self.controller.on_tree_select,
+            on_tree_double_click=self.controller.on_tree_double_click,
+        )
+        self.controller.refresh_detection()
+        root.after(100, self._drain_events)
+
+    def _drain_events(self) -> None:
+        try:
+            while True:
+                self.controller.handle_event(self._event_q.get_nowait())
+        except queue.Empty:
+            pass
+        finally:
+            self.root.after(100, self._drain_events)

@@ -1,0 +1,85 @@
+from __future__ import annotations
+
+import queue
+import threading
+from tkinter import messagebox
+
+from ..detection import detect_installed_apps
+from ..installer import InstallEvent, InstallerWorker
+from ..models import CATALOG, AppSpec
+from .view import WinPyDeployView
+
+
+class WinPyDeployController:
+    def __init__(self, view: WinPyDeployView, event_q: "queue.Queue[InstallEvent]"):
+        self.view = view
+        self._event_q = event_q
+        self._worker = InstallerWorker(event_q)
+        self._worker_thread: threading.Thread | None = None
+        self._spec_by_id = {a.app_id: a for a in CATALOG}
+        self._installed: dict[str, bool] = {}
+        self._selected: set[str] = set()
+
+    def refresh_detection(self) -> None:
+        self._installed = detect_installed_apps(CATALOG)
+        self.view.rebuild_tree(CATALOG, self._installed, self._selected)
+        self.view.log("检测完成。双击条目可切换选择。")
+
+    def on_tree_select(self, _evt=None) -> None:
+        self._selected = set(self.view.selection())
+
+    def on_tree_double_click(self, evt) -> None:
+        item = self.view.tree.identify_row(evt.y)
+        if not item:
+            return
+        current = set(self.view.selection())
+        (current.remove(item) if item in current else current.add(item))
+        self.view.set_selection(list(current)); self._selected = current
+
+    def select_all_missing(self) -> None:
+        missing = [a.app_id for a in CATALOG if not self._installed.get(a.app_id, False)]
+        self.view.set_selection(missing); self._selected = set(missing)
+
+    def clear_selection(self) -> None:
+        self.view.clear_selection(); self._selected.clear()
+
+    def start_install(self) -> None:
+        if self._worker_thread and self._worker_thread.is_alive():
+            messagebox.showinfo("提示", "正在安装中，请先取消或等待完成。"); return
+        if not self._selected:
+            messagebox.showinfo("提示", "请先选择要安装的软件（双击条目或框选）。"); return
+
+        to_install: list[AppSpec] = []
+        for app_id in list(self._selected):
+            if self._installed.get(app_id, False):
+                self.view.log(f"跳过已安装：{self._spec_by_id[app_id].name}")
+            else:
+                to_install.append(self._spec_by_id[app_id])
+        if not to_install:
+            messagebox.showinfo("提示", "选择的软件都已安装，无需执行。"); return
+
+        self.view.log(f"准备安装 {len(to_install)} 个软件…")
+        self.view.set_busy(True)
+        self._worker = InstallerWorker(self._event_q)
+        self._worker_thread = threading.Thread(target=self._worker.install, args=(to_install,), daemon=True)
+        self._worker_thread.start()
+
+    def cancel_install(self) -> None:
+        self._worker.stop(); self.view.log("已发出取消信号（将停止后续任务）。")
+
+    def handle_event(self, ev: InstallEvent) -> None:
+        if ev.kind in {"starting", "log"} and ev.message:
+            self.view.log(ev.message)
+        elif ev.kind == "progress" and ev.message in {"20", "60", "100"}:
+            app = self._spec_by_id.get(ev.app_id)
+            if app:
+                self.view.log(f"{app.name} ... {ev.message}%")
+        elif ev.kind == "success":
+            self._installed[ev.app_id] = True
+            self.view.rebuild_tree(CATALOG, self._installed, self._selected)
+        elif ev.kind == "skipped":
+            app = self._spec_by_id.get(ev.app_id)
+            if app:
+                self.view.log(f"已跳过：{app.name}")
+        elif ev.kind == "all_done":
+            self.view.set_busy(False); self.view.log("全部任务已结束。")
