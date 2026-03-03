@@ -20,9 +20,14 @@ if defined SERVER (
     set "VLINE="
     for /f "usebackq delims=" %%L in (`"%SERVER%" --version 2^>nul`) do if not defined VLINE set "VLINE=%%L"
     if defined VLINE (
-      set "VER=!VLINE:*v=!"
+      set "VER="
+      for /f "tokens=2 delims==" %%V in ("!VLINE!") do if not defined VER set "VER=%%V"
       for /f "tokens=1 delims= " %%V in ("!VER!") do set "VER=%%V"
-      echo Redis !VER!
+      if defined VER (
+        echo Redis !VER!
+      ) else (
+        echo Redis
+      )
       echo !VLINE!
     ) else (
       "%SERVER%" --version

@@ -272,6 +272,12 @@ def ensure_install_config() -> Path:
                 return False
             return True
 
+        if name.startswith("manage_"):
+            if b"WinPyDeploy helper script" not in existing:
+                return True
+            # New manage scripts should prefer PATH lookup via `where`
+            return b"where " not in existing
+
         # Default: keep existing
         return False
 
