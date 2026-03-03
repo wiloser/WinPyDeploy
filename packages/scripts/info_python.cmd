@@ -25,9 +25,9 @@ if not exist "%PY%" (
   exit /b 1
 )
 
-echo %PY%
 "%PY%" --version
 if errorlevel 1 exit /b %ERRORLEVEL%
+echo %PY%
 
 "%PY%" -m pip --version
 if errorlevel 1 exit /b %ERRORLEVEL%
