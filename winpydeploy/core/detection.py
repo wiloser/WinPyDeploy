@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import os
 import platform
 import subprocess
+from pathlib import Path
 
 from .models import AppSpec
 
@@ -26,9 +28,19 @@ def detect_installed_apps(apps: tuple[AppSpec, ...]) -> dict[str, bool]:
 
     result: dict[str, bool] = {}
     for app in apps:
+        expected_ok = True
+        if getattr(app, "expected_paths", ()):  # backward compat with older cached objects
+            for raw in app.expected_paths:
+                p = os.path.expandvars(raw)
+                if not p:
+                    continue
+                if not Path(p).exists():
+                    expected_ok = False
+                    break
+
         cmds = app.detect_commands
-        if not cmds:
-            result[app.app_id] = False
-            continue
-        result[app.app_id] = all(_run_check(c) for c in cmds)
+        if cmds:
+            result[app.app_id] = expected_ok and all(_run_check(c) for c in cmds)
+        else:
+            result[app.app_id] = expected_ok and bool(getattr(app, "expected_paths", ()))
     return result

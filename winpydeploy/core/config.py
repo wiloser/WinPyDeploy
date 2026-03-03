@@ -65,6 +65,13 @@ def load_catalog(config_path: Path | None = None) -> tuple[AppSpec, ...]:
         detect = spec.get("detectCommands") or spec.get("detect_commands") or []
         detect_commands = tuple(str(c) for c in detect if str(c).strip())
 
+        expected = spec.get("expectedPaths") or spec.get("expected_paths") or []
+        expected_paths = tuple(str(p).strip() for p in expected if str(p).strip())
+        if not expected_paths and str(spec.get("installerType") or "").lower() == "zip":
+            td = str(spec.get("targetDir") or spec.get("target_dir") or "").strip()
+            if td:
+                expected_paths = (td,)
+
         info = spec.get("infoCommands") or spec.get("info_commands") or []
         info_commands = tuple(str(c) for c in info if str(c).strip())
 
@@ -98,6 +105,7 @@ def load_catalog(config_path: Path | None = None) -> tuple[AppSpec, ...]:
                 sha256=sha256,
                 extra_files=extra_files,
                 detect_commands=detect_commands,
+                expected_paths=expected_paths,
                 info_commands=info_commands,
                 post_install_commands=tuple(post_install_commands),
                 notes=notes,

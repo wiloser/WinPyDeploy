@@ -114,7 +114,13 @@ def ensure_install_config() -> Path:
     for name in ("install_python.cmd", "install_mysql.cmd", "install_redis.cmd"):
         dst = scripts / name
         if dst.exists():
-            continue
+            try:
+                b = dst.read_bytes()
+                # Legacy buggy pattern that can break REG ADD when PATH contains quotes.
+                if b"| find /i \"Path\"" not in b and b"^| find /i \"Path\"" not in b:
+                    continue
+            except Exception:
+                continue
         bundled = _bundled_packages_file(f"scripts/{name}")
         src = bundled or (project_root() / "packages" / "scripts" / name)
         if src.exists():

@@ -23,6 +23,15 @@ class WinPyDeployController:
         self._installed: dict[str, bool] = {}; self._package_ok: dict[str, bool] = {}; self._errors: dict[str, str] = {}
         self._versions: dict[str, str] = {}; self._selected: set[str] = set(); self._tasks: dict[str, str] = {}
         self._info_thread: threading.Thread | None = None; self._info: InfoWorker | None = None; self._info_app = ""
+        self._suppress_tree_select = False
+        self._last_info_app = ""; self._last_info_at = 0.0
+
+    def _rebuild_tree(self) -> None:
+        self._suppress_tree_select = True
+        try:
+            self.view.rebuild_tree(self._catalog, self._installed, self._selected, self._package_ok, self._errors, self._versions)
+        finally:
+            self._suppress_tree_select = False
 
     def _task(self, tid: str, text: str | None) -> None:
         (self._tasks.__setitem__(tid, text) if text is not None else self._tasks.pop(tid, None)); self.view.set_tasks(list(self._tasks.items()))
@@ -99,14 +108,20 @@ class WinPyDeployController:
         self._catalog = load_catalog(); self._spec_by_id = {a.app_id: a for a in self._catalog}; self._installed = detect_installed_apps(self._catalog)
         self._package_ok = {a.app_id: ((not a.package_path or Path(a.package_path).exists()) and all(Path(f.path).exists() for f in getattr(a, "extra_files", ()))) for a in self._catalog}
         self._errors = {k: v for k, v in self._errors.items() if k in self._spec_by_id}; self._versions = {k: v for k, v in self._versions.items() if k in self._spec_by_id}
-        self.view.rebuild_tree(self._catalog, self._installed, self._selected, self._package_ok, self._errors, self._versions); self.view.set_tasks(list(self._tasks.items())); self.view.log("检测完成。")
+        self._rebuild_tree(); self.view.set_tasks(list(self._tasks.items())); self.view.log("检测完成。")
 
     def on_tree_select(self, _evt=None) -> None:
+        if self._suppress_tree_select:
+            return
         sel = self.view.selection(); self._selected = set(sel)
         if not sel: self.view.set_details(""); return
         app_id = sel[-1]; spec = self._spec_by_id.get(app_id)
         if not self._installed.get(app_id, False): self.view.set_details("未安装。\n"); return
         if not spec or not spec.info_commands: self.view.set_details("(未配置 infoCommands)\n"); return
+        now = __import__("time").time()
+        if app_id == self._last_info_app and (now - self._last_info_at) < 1.0:
+            return
+        self._last_info_app, self._last_info_at = app_id, now
         self.view.set_details("加载中…\n"); (self._info_thread and self._info_thread.is_alive() and self._info and self._info.stop())
         self._info = InfoWorker(self._event_q)  # type: ignore[arg-type]
         self._info_app = app_id; self._task(f"info:{app_id}", f"信息 {spec.name}"); self._info_thread = threading.Thread(target=self._info.fetch, args=(spec,), daemon=True); self._info_thread.start()
@@ -142,17 +157,17 @@ class WinPyDeployController:
         elif ev.kind == "downloaded":
             a = self._spec_by_id.get(ev.app_id)
             if a: self._package_ok[ev.app_id] = ((not a.package_path or Path(a.package_path).exists()) and all(Path(f.path).exists() for f in getattr(a, "extra_files", ())));
-            self._task(f"dl:{ev.app_id}", None); self.view.rebuild_tree(self._catalog, self._installed, self._selected, self._package_ok, self._errors, self._versions)
+            self._task(f"dl:{ev.app_id}", None); self._rebuild_tree()
         elif ev.kind == "success":
             self._installed[ev.app_id] = True; self._errors.pop(ev.app_id, None); self._task(f"ins:{ev.app_id}", None)
-            self.view.rebuild_tree(self._catalog, self._installed, self._selected, self._package_ok, self._errors, self._versions)
+            self._rebuild_tree()
         elif ev.kind == "skipped":
             app = self._spec_by_id.get(ev.app_id); app and self.view.log(("已取消：" if ev.message == "cancelled" else "已跳过：") + app.name)
             self._task(f"dl:{ev.app_id}", None); self._task(f"ins:{ev.app_id}", None); self._task(f"info:{ev.app_id}", None)
         elif ev.kind == "failed" and ev.message:
             self._errors[ev.app_id] = ev.message; self.view.log(ev.message)
             self._task(f"dl:{ev.app_id}", None); self._task(f"ins:{ev.app_id}", None)
-            self.view.rebuild_tree(self._catalog, self._installed, self._selected, self._package_ok, self._errors, self._versions)
+            self._rebuild_tree()
         elif ev.kind == "log" and ev.message:
             m = ev.message.strip(); prefix = "下载进度："
             if ev.app_id != "*" and m.startswith(prefix) and "MB/" in m and m.endswith("MB"):
@@ -169,6 +184,6 @@ class WinPyDeployController:
             self.view.set_details(ev.message or "")
             first = next((ln.strip() for ln in (ev.message or "").splitlines() if ln.strip() and not ln.strip().startswith(">")), "")
             if first: self._versions[ev.app_id] = first[:60]
-            self._task(f"info:{ev.app_id}", None); self.view.rebuild_tree(self._catalog, self._installed, self._selected, self._package_ok, self._errors, self._versions)
+            self._task(f"info:{ev.app_id}", None); self._rebuild_tree()
         elif ev.kind in {"download_all_done", "all_done"}:
             self.view.set_busy(False); self.view.log("下载任务已结束。" if ev.kind == "download_all_done" else "全部任务已结束。")
