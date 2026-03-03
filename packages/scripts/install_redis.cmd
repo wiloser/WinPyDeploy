@@ -28,7 +28,7 @@ tar -xf "%ZIP%" -C "%DST%"
 if errorlevel 1 exit /b %errorlevel%
 
 rem Flatten common zip layout: %DST%\Redis-8.x\redis-server.exe -> %DST%\redis-server.exe
-rem flatten-v4: copy-only flattening (no /move), with best-effort cleanup
+rem flatten-v5: copy-only flattening (no /move), with correct delayed expansion
 if not exist "%DST%\redis-server.exe" if not exist "%DST%\bin\redis-server.exe" (
   set "INNER="
   for /d %%D in ("%DST%\*") do (
@@ -50,8 +50,8 @@ if not exist "%DST%\redis-server.exe" if not exist "%DST%\bin\redis-server.exe" 
     )
   )
   if defined INNER (
-    echo [redis] flattening: "%INNER%" -> "%DST%"
-    robocopy "%INNER%" "%DST%" /e /r:1 /w:1
+    echo [redis] flattening: "!INNER!" -> "%DST%"
+    robocopy "!INNER!" "%DST%" /e /r:1 /w:1
     set "RC=!ERRORLEVEL!"
     if !RC! GEQ 8 (
       echo [redis] flatten failed. robocopy=!RC!
