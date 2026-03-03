@@ -7,6 +7,8 @@ from pathlib import Path
 import re
 import subprocess
 import time
+import locale
+import os
 from tkinter import messagebox, filedialog
 import tkinter as tk
 from tkinter import ttk
@@ -19,6 +21,18 @@ from ..workers.info_worker import InfoWorker
 from ..workers.installer import InstallEvent, InstallerWorker
 from ..core.models import AppSpec
 from .view import WinPyDeployView
+
+
+def _windows_cmd_encoding() -> str:
+    env_enc = (os.environ.get("WINPYDEPLOY_CMD_ENCODING") or "").strip()
+    if env_enc:
+        return env_enc
+    try:
+        return locale.getpreferredencoding(False) or "gbk"
+    except Exception:
+        return "gbk"
+
+
 class WinPyDeployController:
     def __init__(self, view: WinPyDeployView, event_q: "queue.Queue[InstallEvent]"):
         self.view, self._event_q = view, event_q
@@ -64,6 +78,7 @@ class WinPyDeployController:
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 text=True,
+                encoding=_windows_cmd_encoding(),
                 errors="replace",
             )
             out, _ = proc.communicate(timeout=12)
@@ -119,6 +134,7 @@ class WinPyDeployController:
                 stdout=subprocess.PIPE,
                 stderr=subprocess.DEVNULL,
                 text=True,
+                encoding=_windows_cmd_encoding(),
                 errors="replace",
                 timeout=2,
             )
@@ -282,6 +298,7 @@ class WinPyDeployController:
                         stdout=subprocess.PIPE,
                         stderr=subprocess.STDOUT,
                         text=True,
+                        encoding=_windows_cmd_encoding(),
                         errors="replace",
                         timeout=10,
                         env={**runtime_env()},

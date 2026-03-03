@@ -4,10 +4,21 @@ import platform
 import subprocess
 import time
 import os
+import locale
 from collections.abc import Callable
 from pathlib import Path
 
 from ..core.paths import expand_with_runtime_env, runtime_env
+
+
+def _windows_cmd_encoding() -> str:
+    env_enc = (os.environ.get("WINPYDEPLOY_CMD_ENCODING") or "").strip()
+    if env_enc:
+        return env_enc
+    try:
+        return locale.getpreferredencoding(False) or "gbk"
+    except Exception:
+        return "gbk"
 
 
 class CommandRunner:
@@ -53,6 +64,7 @@ class CommandRunner:
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,
+            encoding=_windows_cmd_encoding(),
             errors="replace",
             bufsize=1,
             env={**os.environ, **runtime_env()},

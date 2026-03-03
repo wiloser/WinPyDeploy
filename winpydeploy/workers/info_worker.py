@@ -4,12 +4,23 @@ import queue
 import platform
 import subprocess
 import threading
+import locale
 from dataclasses import dataclass
 from time import monotonic
 import os
 
 from ..core.models import AppSpec
 from ..core.paths import expand_with_runtime_env, runtime_env
+
+
+def _windows_cmd_encoding() -> str:
+    env_enc = (os.environ.get("WINPYDEPLOY_CMD_ENCODING") or "").strip()
+    if env_enc:
+        return env_enc
+    try:
+        return locale.getpreferredencoding(False) or "gbk"
+    except Exception:
+        return "gbk"
 
 
 @dataclass(frozen=True)
@@ -50,6 +61,7 @@ class InfoWorker:
                     stdout=subprocess.PIPE,
                     stderr=subprocess.STDOUT,
                     text=True,
+                    encoding=_windows_cmd_encoding(),
                     errors="replace",
                     env={**os.environ, **runtime_env()},
                 )
