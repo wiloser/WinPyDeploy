@@ -6,12 +6,22 @@ set "ROOT=C:\Program Files\softs"
 if defined WINPYDEPLOY_INSTALL_DIR set "ROOT=%WINPYDEPLOY_INSTALL_DIR%"
 set "DST=%ROOT%\Python312"
 
+rem Preflight: ensure target dir is writable (Program Files often requires elevation)
+mkdir "%DST%" 2>nul
+(
+  >"%DST%\.__writetest" echo ok
+) 2>nul
+if not exist "%DST%\.__writetest" (
+  echo [python] ERROR: no write permission to "%DST%".
+  echo [python] 请使用管理员权限运行，或在设置中把“集中安装目录”改到非 Program Files 目录（如 C:\softs）。
+  exit /b 5
+)
+del /q "%DST%\.__writetest" 2>nul
+
 if not exist "%ZIP%" (
   echo [python] zip not found: "%ZIP%"
   exit /b 2
 )
-
-mkdir "%DST%" 2>nul
 
 echo [python] extracting...
 tar -xf "%ZIP%" -C "%DST%"
@@ -38,7 +48,7 @@ if not exist "%DST%\python.exe" (
     robocopy "%INNER%" "%DST%" /e /move >nul
     set "RC=!ERRORLEVEL!"
     if !RC! GEQ 8 (
-      echo [python] flatten failed (robocopy=%RC%)
+      echo [python] flatten failed (robocopy=!RC!)
       exit /b !RC!
     )
     rmdir "%INNER%" 2>nul

@@ -6,12 +6,22 @@ set "ROOT=C:\Program Files\softs"
 if defined WINPYDEPLOY_INSTALL_DIR set "ROOT=%WINPYDEPLOY_INSTALL_DIR%"
 set "DST=%ROOT%\Redis"
 
+rem Preflight: ensure target dir is writable (Program Files often requires elevation)
+mkdir "%DST%" 2>nul
+(
+  >"%DST%\.__writetest" echo ok
+) 2>nul
+if not exist "%DST%\.__writetest" (
+  echo [redis] ERROR: no write permission to "%DST%".
+  echo [redis] 请使用管理员权限运行，或在设置中把“集中安装目录”改到非 Program Files 目录（如 C:\softs）。
+  exit /b 5
+)
+del /q "%DST%\.__writetest" 2>nul
+
 if not exist "%ZIP%" (
   echo [redis] zip not found: "%ZIP%"
   exit /b 2
 )
-
-mkdir "%DST%" 2>nul
 
 echo [redis] extracting...
 tar -xf "%ZIP%" -C "%DST%"
@@ -44,7 +54,7 @@ if not exist "%DST%\redis-server.exe" if not exist "%DST%\bin\redis-server.exe" 
     robocopy "%INNER%" "%DST%" /e /move >nul
     set "RC=!ERRORLEVEL!"
     if !RC! GEQ 8 (
-      echo [redis] flatten failed (robocopy=%RC%)
+      echo [redis] flatten failed (robocopy=!RC!)
       exit /b !RC!
     )
     rmdir "%INNER%" 2>nul
