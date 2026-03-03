@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import os
+import platform
 import re
 import shutil
 import sys
@@ -64,6 +66,119 @@ def set_install_dir(path: str) -> None:
     _INSTALL_OVERRIDE = Path(path).expanduser() if path else None
 
 
+_INJECT_CACHE_ROOT: str | None = None
+_INJECT_CACHE_DIRS: list[str] | None = None
+
+
+def _compute_injected_dirs(install_root: str) -> list[str]:
+    root = Path(install_root)
+    dirs: list[str] = []
+
+    def add_dir(p: Path) -> None:
+        try:
+            if p.exists() and p.is_dir():
+                dirs.append(str(p))
+        except Exception:
+            return
+
+    def add_parent_of_first_exe(base: Path, exe_names: tuple[str, ...]) -> None:
+        try:
+            if not base.exists() or not base.is_dir():
+                return
+        except Exception:
+            return
+        for exe in exe_names:
+            try:
+                for hit in base.rglob(exe):
+                    add_dir(hit.parent)
+                    return
+            except Exception:
+                continue
+
+    # Python
+    py = root / "Python312"
+    if (py / "python.exe").exists():
+        add_dir(py)
+    else:
+        add_parent_of_first_exe(py, ("python.exe",))
+    if (py / "Scripts" / "pip.exe").exists():
+        add_dir(py / "Scripts")
+
+    # MySQL
+    mysql = root / "MySQL"
+    if (mysql / "bin").exists():
+        add_dir(mysql / "bin")
+    else:
+        add_parent_of_first_exe(mysql, ("mysqld.exe", "mysql.exe"))
+
+    # Redis
+    redis = root / "Redis"
+    add_dir(redis)
+    if (redis / "bin").exists():
+        add_dir(redis / "bin")
+    add_parent_of_first_exe(redis, ("redis-server.exe", "redis-cli.exe"))
+
+    # Stable order + remove duplicates (case-insensitive on Windows)
+    out: list[str] = []
+    seen: set[str] = set()
+    for d in dirs:
+        n = d.strip().lower()
+        if n and n not in seen:
+            out.append(d)
+            seen.add(n)
+    return out
+
+
+def _build_injected_path(install_root: str, current_path: str) -> str:
+    """Build a PATH with our known install locations prepended.
+
+    This does NOT write registry; it only affects subprocess environments.
+    """
+    global _INJECT_CACHE_ROOT, _INJECT_CACHE_DIRS
+    if _INJECT_CACHE_ROOT != install_root or _INJECT_CACHE_DIRS is None:
+        _INJECT_CACHE_ROOT = install_root
+        _INJECT_CACHE_DIRS = _compute_injected_dirs(install_root)
+
+    candidates = _INJECT_CACHE_DIRS
+    if not candidates:
+        return current_path or ""
+
+    existing = [x for x in (current_path or "").split(os.pathsep) if x]
+    existing_norm = {x.strip().lower() for x in existing}
+    injected: list[str] = []
+    for c in candidates:
+        n = c.strip().lower()
+        if n and n not in existing_norm:
+            injected.append(c)
+            existing_norm.add(n)
+
+    if not injected:
+        return current_path or ""
+    return os.pathsep.join(injected + existing)
+
+
+def runtime_env() -> dict[str, str]:
+    ins = install_dir()
+    pkg = packages_dir()
+    env = {
+        "WINPYDEPLOY_PACKAGES_DIR": str(pkg),
+        "WINPYDEPLOY_INSTALL_DIR": str(ins) if ins is not None else DEFAULT_INSTALL_DIR,
+    }
+    if platform.system().lower() == "windows":
+        env["PATH"] = _build_injected_path(env["WINPYDEPLOY_INSTALL_DIR"], os.environ.get("PATH", ""))
+    return env
+
+
+def expand_with_runtime_env(text: str) -> str:
+    env = {k.upper(): v for k, v in {**os.environ, **runtime_env()}.items()}
+
+    def repl(m: re.Match[str]) -> str:
+        key = m.group(1).upper()
+        return env.get(key, m.group(0))
+
+    return re.sub(r"%([^%]+)%", repl, text)
+
+
 def ensure_packages_dir() -> Path:
     path = packages_dir()
     path.mkdir(parents=True, exist_ok=True)
@@ -116,8 +231,13 @@ def ensure_install_config() -> Path:
         if dst.exists():
             try:
                 b = dst.read_bytes()
-                # Legacy buggy pattern that can break REG ADD when PATH contains quotes.
-                if b"| find /i \"Path\"" not in b and b"^| find /i \"Path\"" not in b:
+                # Only overwrite when the script looks older than our current strategy:
+                # unzip only; PATH is injected by WinPyDeploy at runtime (no registry writes).
+                required = (
+                    b"WINPYDEPLOY_INSTALL_DIR",
+                    b"PATH is injected",
+                )
+                if all(m in b for m in required):
                     continue
             except Exception:
                 continue

@@ -3,8 +3,11 @@ from __future__ import annotations
 import platform
 import subprocess
 import time
+import os
 from collections.abc import Callable
 from pathlib import Path
+
+from ..core.paths import expand_with_runtime_env, runtime_env
 
 
 class CommandRunner:
@@ -21,6 +24,7 @@ class CommandRunner:
                 pass
 
     def run(self, *, app_id: str, cmd: str, check_installer_path: bool = True) -> int:
+        cmd = expand_with_runtime_env(cmd)
         self._emit("log", app_id, f"  {cmd}")
         if platform.system().lower() != "windows":
             time.sleep(0.25)
@@ -40,6 +44,7 @@ class CommandRunner:
             text=True,
             errors="replace",
             bufsize=1,
+            env={**os.environ, **runtime_env()},
         )
         assert self._proc.stdout is not None
         for line in self._proc.stdout:

@@ -6,8 +6,10 @@ import subprocess
 import threading
 from dataclasses import dataclass
 from time import monotonic
+import os
 
 from ..core.models import AppSpec
+from ..core.paths import expand_with_runtime_env, runtime_env
 
 
 @dataclass(frozen=True)
@@ -41,6 +43,7 @@ class InfoWorker:
                 self._q.put(InfoEvent("info_done", app.app_id, "cancelled")); return
             out.append(f"> {cmd}")
             try:
+                cmd = expand_with_runtime_env(cmd)
                 self._proc = subprocess.Popen(
                     cmd,
                     shell=True,
@@ -48,6 +51,7 @@ class InfoWorker:
                     stderr=subprocess.STDOUT,
                     text=True,
                     errors="replace",
+                    env={**os.environ, **runtime_env()},
                 )
                 assert self._proc.stdout is not None
                 # infoCommands should be quick; keep UI responsive even on false positives

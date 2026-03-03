@@ -8,11 +8,9 @@ set PYTHONIOENCODING=utf-8
 set "OUT=out"
 set "APP=WinPyDeploy"
 set "ARCH=%OUT%\archives"
-set "REL=%OUT%\release"
 
 if not exist "%OUT%" mkdir "%OUT%" >nul 2>nul
 if not exist "%ARCH%" mkdir "%ARCH%" >nul 2>nul
-if not exist "%REL%" mkdir "%REL%" >nul 2>nul
 
 echo Build starting...
 
@@ -24,6 +22,7 @@ python -m nuitka --standalone --show-progress --plugin-enable=tk-inter --output-
 	--windows-console-mode=disable ^
 	--file-reference-choice=runtime ^
 	--lto=yes ^
+	--output-filename=%APP% ^
 	--include-data-file=packages\install_config.json=packages\install_config.json ^
 	--include-data-file=packages\scripts\install_python.cmd=packages\scripts\install_python.cmd ^
 	--include-data-file=packages\scripts\install_mysql.cmd=packages\scripts\install_mysql.cmd ^
@@ -54,17 +53,7 @@ if not defined DIST (
 
 move "%DIST%" "%OUT%\%APP%" >nul
 
-rem Rename exe to a stable name
-if exist "%OUT%\%APP%\main.exe" ren "%OUT%\%APP%\main.exe" "%APP%.exe" >nul
-
-rem Create a zip archive of the new build (optional but handy for distribution)
-for /f %%T in ('powershell -NoProfile -Command "Get-Date -Format yyyyMMdd_HHmmss"') do set "TS=%%T"
-powershell -NoProfile -Command "if(Test-Path '%OUT%\\%APP%'){Compress-Archive -Force -Path '%OUT%\\%APP%\\*' -DestinationPath '%REL%\\%APP%_!TS!.zip'}" >nul
-
-rem Move expanded folder into archives (keeps workspace tidy; zip is the deliverable)
-if exist "%OUT%\%APP%" move "%OUT%\%APP%" "%ARCH%\%APP%_!TS!" >nul
-
-echo Done. Deliverable: %REL%\%APP%_!TS!.zip
-echo Expanded folder archived to: %ARCH%\%APP%_!TS!
+echo Done. Output folder: %OUT%\%APP%
+echo Note: .pyd/.dll files are required runtime dependencies for standalone builds.
 
 endlocal

@@ -23,14 +23,15 @@
       "installerType": "zip",
       "targetDir": "C:\\Program Files\\softs\\Python312",
       "installScript": "scripts/install_python.cmd",
+      "expectedPaths": ["%WINPYDEPLOY_INSTALL_DIR%\\Python312\\python.exe"],
       "detectCommands": [
-        "cmd /c \"if exist \\\"C:\\Program Files\\softs\\Python312\\python.exe\\\" (exit /b 0) else (exit /b 1)\"",
-        "\"C:\\Program Files\\softs\\Python312\\python.exe\" -m pip --version"
+        "cmd /c \"if exist \\\"%WINPYDEPLOY_INSTALL_DIR%\\Python312\\python.exe\\\" (exit /b 0) else (exit /b 1)\"",
+        "\"%WINPYDEPLOY_INSTALL_DIR%\\Python312\\python.exe\" -m pip --version"
       ],
       "infoCommands": [
-        "\"C:\\Program Files\\softs\\Python312\\python.exe\" --version",
-        "\"C:\\Program Files\\softs\\Python312\\python.exe\" -m pip --version",
-        "\"C:\\Program Files\\softs\\Python312\\python.exe\" -m pip list --format=columns"
+        "\"%WINPYDEPLOY_INSTALL_DIR%\\Python312\\python.exe\" --version",
+        "\"%WINPYDEPLOY_INSTALL_DIR%\\Python312\\python.exe\" -m pip --version",
+        "\"%WINPYDEPLOY_INSTALL_DIR%\\Python312\\python.exe\" -m pip list --format=columns"
       ],
       "detectKeywords": ["python"]
     },
@@ -51,12 +52,15 @@
       "downloadUrl": "https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-8.0.45-winx64.zip",
       "sha256": "",
       "installerType": "zip",
-      "targetDir": "C:\\Program Files\\softs\\MySQL",
+      "targetDir": "%WINPYDEPLOY_INSTALL_DIR%\\MySQL",
       "installScript": "scripts/install_mysql.cmd",
       "detectCommands": [
-        "cmd /c \"for /r \\\"C:\\Program Files\\softs\\MySQL\\\" %F in (mysqld.exe) do exit /b 0 & exit /b 1\""
+        "cmd /c \"for /r \\\"%WINPYDEPLOY_INSTALL_DIR%\\MySQL\\\" %F in (mysqld.exe) do (exit /b 0) & exit /b 1\""
       ],
-      "infoCommands": ["where mysqld", "mysqld --version", "where mysql", "mysql --version"],
+      "infoCommands": [
+        "cmd /c \"for /r \\\"%WINPYDEPLOY_INSTALL_DIR%\\MySQL\\\" %F in (mysqld.exe) do (\"%F\" --version & exit /b 0) & echo mysqld.exe not found & exit /b 1\"",
+        "cmd /c \"for /r \\\"%WINPYDEPLOY_INSTALL_DIR%\\MySQL\\\" %F in (mysql.exe) do (\"%F\" --version & exit /b 0) & echo mysql.exe not found & exit /b 1\""
+      ],
       "detectKeywords": ["mysql"]
     },
     "redis": {
@@ -66,12 +70,15 @@
       "downloadUrl": "https://gitee.com/allinth/downloadpub/releases/download/Redis-8.6.1-Windows-x64-cygwin/Redis-8.6.1-Windows-x64-cygwin.zip",
       "sha256": "",
       "installerType": "zip",
-      "targetDir": "C:\\Program Files\\softs\\Redis",
+      "targetDir": "%WINPYDEPLOY_INSTALL_DIR%\\Redis",
       "installScript": "scripts/install_redis.cmd",
       "detectCommands": [
-        "cmd /c \"for /r \\\"C:\\Program Files\\softs\\Redis\\\" %F in (redis-server.exe) do exit /b 0 & exit /b 1\""
+        "cmd /c \"for /r \\\"%WINPYDEPLOY_INSTALL_DIR%\\Redis\\\" %F in (redis-server.exe) do (exit /b 0) & exit /b 1\""
       ],
-      "infoCommands": ["where redis-server", "redis-server --version", "where redis-cli", "redis-cli --version"],
+      "infoCommands": [
+        "cmd /c \"for /r \\\"%WINPYDEPLOY_INSTALL_DIR%\\Redis\\\" %F in (redis-server.exe) do (\"%F\" --version & exit /b 0) & echo redis-server.exe not found & exit /b 1\"",
+        "cmd /c \"for /r \\\"%WINPYDEPLOY_INSTALL_DIR%\\Redis\\\" %F in (redis-cli.exe) do (\"%F\" --version & exit /b 0) & echo redis-cli.exe not found & exit /b 1\""
+      ],
       "detectKeywords": ["redis"]
     }
   }
