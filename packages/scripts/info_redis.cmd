@@ -13,16 +13,20 @@ if not exist "%BASE%" (
 
 set "SERVER="
 for /r "%BASE%" %%F in (redis-server.exe) do if not defined SERVER set "SERVER=%%~fF"
+set "EC=0"
 if defined SERVER (
   set "SERVER=%SERVER:"=%"
   echo %SERVER%
   if exist "%SERVER%" (
     "%SERVER%" --version
+    if errorlevel 1 set "EC=%ERRORLEVEL%"
   ) else (
     echo redis-server.exe path invalid: "%SERVER%"
+    set "EC=1"
   )
 ) else (
   echo redis-server.exe not found under "%BASE%"
+  set "EC=1"
 )
 
 set "CLI="
@@ -32,6 +36,7 @@ if defined CLI (
   echo %CLI%
   if exist "%CLI%" (
     "%CLI%" --version
+    rem cli is optional; do not fail overall if it errors
   ) else (
     echo redis-cli.exe path invalid: "%CLI%"
   )
@@ -39,5 +44,4 @@ if defined CLI (
   echo redis-cli.exe not found under "%BASE%"
 )
 
-if defined SERVER exit /b 0
-exit /b 1
+exit /b %EC%

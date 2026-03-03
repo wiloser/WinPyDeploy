@@ -48,7 +48,16 @@ class DownloadWorker:
             if stop(): self._emit("skipped", app.app_id, "cancelled"); return
             if Path(f.path).exists():
                 continue
-            tmp = AppSpec(app_id=app.app_id, name=app.name, detect_keywords=(), install_commands=(), package_path=f.path, download_url=f.download_url, sha256=f.sha256, expected_paths=())
+            tmp = AppSpec(
+                app_id=app.app_id,
+                name=app.name,
+                detect_keywords=(),
+                install_commands=(),
+                package_path=f.path,
+                download_url=f.download_url,
+                sha256=f.sha256,
+                expected_paths=(),
+            )
             if not ensure_package(tmp, self._emit, stop):
                 self._emit("skipped" if stop() else "failed", app.app_id, "cancelled" if stop() else "下载额外文件失败")
                 return

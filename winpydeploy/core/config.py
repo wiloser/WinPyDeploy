@@ -75,6 +75,9 @@ def load_catalog(config_path: Path | None = None) -> tuple[AppSpec, ...]:
         info = spec.get("infoCommands") or spec.get("info_commands") or []
         info_commands = tuple(str(c) for c in info if str(c).strip())
 
+        running = spec.get("runningProcesses") or spec.get("running_processes") or []
+        running_processes = tuple(str(p).strip() for p in running if str(p).strip())
+
         commands = spec.get("installCommands") or spec.get("install_commands") or _commands_from_script(spec) or _commands_from_package(str(app_id), spec) or []
         install_commands = tuple(str(c) for c in commands if str(c).strip())
 
@@ -108,6 +111,7 @@ def load_catalog(config_path: Path | None = None) -> tuple[AppSpec, ...]:
                 expected_paths=expected_paths,
                 info_commands=info_commands,
                 post_install_commands=tuple(post_install_commands),
+                running_processes=running_processes,
                 notes=notes,
             )
         )

@@ -1,5 +1,5 @@
 @echo off
-setlocal EnableExtensions
+setlocal EnableExtensions EnableDelayedExpansion
 
 set "ZIP=%~dp0..\redis-windows-x64.zip"
 set "ROOT=C:\Program Files\softs"
@@ -27,10 +27,10 @@ if not exist "%DST%\redis-server.exe" (
   if defined INNER (
     echo [redis] flattening: "%INNER%" -> "%DST%"
     robocopy "%INNER%" "%DST%" /e /move >nul
-    set "RC=%ERRORLEVEL%"
-    if %RC% GEQ 8 (
+    set "RC=!ERRORLEVEL!"
+    if !RC! GEQ 8 (
       echo [redis] flatten failed (robocopy=%RC%)
-      exit /b %RC%
+      exit /b !RC!
     )
     rmdir "%INNER%" 2>nul
   )

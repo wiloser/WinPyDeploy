@@ -24,4 +24,5 @@ class AppSpec:
     expected_paths: tuple[str, ...] = ()
     info_commands: tuple[str, ...] = ()
     post_install_commands: tuple[str, ...] = ()
+    running_processes: tuple[str, ...] = ()
     notes: str = ""

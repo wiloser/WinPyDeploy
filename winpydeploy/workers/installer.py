@@ -1,5 +1,6 @@
 from __future__ import annotations
 import queue, platform, threading
+import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 from ..core.models import AppSpec
@@ -33,6 +34,37 @@ class InstallerWorker:
 
     def install(self, apps: list[AppSpec]) -> None:
         is_windows = platform.system().lower() == "windows"
+
+        def is_running(image_name: str) -> bool:
+            if not is_windows:
+                return False
+            name = str(image_name).strip().strip('"')
+            if not name:
+                return False
+            if not name.lower().endswith(".exe"):
+                name = name + ".exe"
+            try:
+                r = subprocess.run(
+                    f'tasklist /FI "IMAGENAME eq {name}"',
+                    shell=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.DEVNULL,
+                    text=True,
+                    errors="replace",
+                    timeout=3,
+                )
+                out = r.stdout or ""
+                for line in out.splitlines():
+                    s = line.strip()
+                    if not s:
+                        continue
+                    # tasklist output's first column is image name
+                    if s.lower().startswith(name.lower() + " "):
+                        return True
+                return False
+            except Exception:
+                return False
+
         for app in apps:
             self._current = app.app_id
             if self._stop.is_set():
@@ -50,6 +82,16 @@ class InstallerWorker:
                 self._q.put(InstallEvent("failed", app.app_id, "未配置 installCommands 或 packageFile，无法安装"))
                 self._stop.set()
                 continue
+
+            # Runtime monitoring: block install when target software is running.
+            if getattr(app, "running_processes", ()):
+                running = [p for p in app.running_processes if is_running(p)]
+                if running:
+                    procs = ", ".join(running)
+                    self._q.put(InstallEvent("log", app.app_id, f"检测到进程正在运行：{procs}"))
+                    self._q.put(InstallEvent("failed", app.app_id, "请先退出/停止正在运行的软件或服务后再安装（避免文件占用）。"))
+                    self._stop.set()
+                    continue
 
             failed = False
 

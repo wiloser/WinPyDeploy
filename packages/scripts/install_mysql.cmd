@@ -1,5 +1,5 @@
 @echo off
-setlocal EnableExtensions
+setlocal EnableExtensions EnableDelayedExpansion
 
 set "ZIP=%~dp0..\mysql-8.0.45-winx64.zip"
 set "ROOT=C:\Program Files\softs"
@@ -26,10 +26,10 @@ if not exist "%DST%\bin\mysqld.exe" (
   if defined INNER (
     echo [mysql] flattening: "%INNER%" -> "%DST%"
     robocopy "%INNER%" "%DST%" /e /move >nul
-    set "RC=%ERRORLEVEL%"
-    if %RC% GEQ 8 (
+    set "RC=!ERRORLEVEL!"
+    if !RC! GEQ 8 (
       echo [mysql] flatten failed (robocopy=%RC%)
-      exit /b %RC%
+      exit /b !RC!
     )
     rmdir "%INNER%" 2>nul
   )

@@ -205,6 +205,14 @@ def _bundled_packages_file(name: str) -> Path | None:
     return p if p.exists() else None
 
 
+def _bundled_scripts_dir() -> Path | None:
+    base = getattr(sys, "_MEIPASS", None)
+    if not base:
+        return None
+    p = (Path(base) / "packages" / "scripts").resolve()
+    return p if p.exists() else None
+
+
 def ensure_install_config() -> Path:
     ensure_packages_dir()
     path = install_config_path()
@@ -225,52 +233,56 @@ def ensure_install_config() -> Path:
         }
         path.write_text(json.dumps(default_config, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
-    scripts = packages_dir() / "scripts"; scripts.mkdir(parents=True, exist_ok=True)
-    for name in (
-        "install_python.cmd",
-        "install_mysql.cmd",
-        "install_redis.cmd",
-        "detect_mysql.cmd",
-        "info_mysql.cmd",
-        "detect_redis.cmd",
-        "info_redis.cmd",
-    ):
-        dst = scripts / name
-        if dst.exists():
+    scripts = packages_dir() / "scripts"
+    scripts.mkdir(parents=True, exist_ok=True)
+
+    # Sync all cmd scripts shipped with the app.
+    # Priority: frozen/runtime (project_root) first, then PyInstaller bundle fallback.
+    src_dirs: list[Path] = []
+    pr = (project_root() / "packages" / "scripts").resolve()
+    if pr.exists():
+        src_dirs.append(pr)
+    bsd = _bundled_scripts_dir()
+    if bsd and bsd.exists():
+        src_dirs.append(bsd)
+
+    def should_overwrite(name: str, existing: bytes) -> bool:
+        # Never clobber user-provided custom scripts (no WinPyDeploy markers)
+        if b"WinPyDeploy" not in existing and b"PATH is injected" not in existing:
+            return False
+
+        if name.startswith("install_"):
+            if b"WINPYDEPLOY_INSTALL_DIR" not in existing or b"PATH is injected" not in existing:
+                return True
+            # Require flattening logic for our zip installers
+            if name in ("install_python.cmd", "install_mysql.cmd", "install_redis.cmd"):
+                return not (b"robocopy" in existing and b"flattening" in existing)
+            return False
+
+        if name.startswith("info_"):
+            if b"WINPYDEPLOY_INSTALL_DIR" not in existing or b"WinPyDeploy helper script" not in existing:
+                return True
+            # Require quote sanitization lines (any one of them indicates new helper style)
+            if b"%SERVER:\"=%" in existing or b"%MYSQD:\"=%" in existing or b"%PY:\"=%" in existing:
+                return False
+            return True
+
+        # Default: keep existing
+        return False
+
+    for src_dir in src_dirs:
+        for src in src_dir.glob("*.cmd"):
+            dst = scripts / src.name
+            if dst.exists():
+                try:
+                    existing = dst.read_bytes()
+                    if not should_overwrite(src.name, existing):
+                        continue
+                except Exception:
+                    continue
             try:
-                b = dst.read_bytes()
-                # Only overwrite when the script looks older than our current strategy:
-                # unzip only; PATH is injected by WinPyDeploy at runtime (no registry writes).
-                if name.startswith("install_"):
-                    required = (
-                        b"WINPYDEPLOY_INSTALL_DIR",
-                        b"PATH is injected",
-                    )
-                    if all(m in b for m in required):
-                        if name in ("install_python.cmd", "install_mysql.cmd", "install_redis.cmd"):
-                            # Require flatten logic marker so older unzip-only scripts get upgraded.
-                            if b"robocopy" in b and b"flattening" in b:
-                                continue
-                        else:
-                            continue
-                else:
-                    required = (
-                        b"WINPYDEPLOY_INSTALL_DIR",
-                        b"WinPyDeploy helper script",
-                    )
-                    if all(m in b for m in required):
-                        # Ensure we have the quote-sanitization logic (either in detect or info scripts)
-                        if (
-                            b"%FOUND:\"=%" in b
-                            or b"%SERVER:\"=%" in b
-                            or b"%MYSQD:\"=%" in b
-                        ):
-                            continue
+                shutil.copyfile(src, dst)
             except Exception:
-                continue
-        bundled = _bundled_packages_file(f"scripts/{name}")
-        src = bundled or (project_root() / "packages" / "scripts" / name)
-        if src.exists():
-            shutil.copyfile(src, dst)
+                pass
 
     return path

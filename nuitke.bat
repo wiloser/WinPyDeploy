@@ -24,13 +24,7 @@ python -m nuitka --standalone --show-progress --plugin-enable=tk-inter --output-
 	--lto=yes ^
 	--output-filename=%APP% ^
 	--include-data-file=packages\install_config.json=packages\install_config.json ^
-	--include-data-file=packages\scripts\install_python.cmd=packages\scripts\install_python.cmd ^
-	--include-data-file=packages\scripts\install_mysql.cmd=packages\scripts\install_mysql.cmd ^
-	--include-data-file=packages\scripts\install_redis.cmd=packages\scripts\install_redis.cmd ^
-	--include-data-file=packages\scripts\detect_mysql.cmd=packages\scripts\detect_mysql.cmd ^
-	--include-data-file=packages\scripts\info_mysql.cmd=packages\scripts\info_mysql.cmd ^
-	--include-data-file=packages\scripts\detect_redis.cmd=packages\scripts\detect_redis.cmd ^
-	--include-data-file=packages\scripts\info_redis.cmd=packages\scripts\info_redis.cmd ^
+	--include-data-dir=packages\scripts=packages\scripts ^
 	main.py
 
 if errorlevel 1 (

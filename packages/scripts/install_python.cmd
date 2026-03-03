@@ -1,5 +1,5 @@
 @echo off
-setlocal EnableExtensions
+setlocal EnableExtensions EnableDelayedExpansion
 
 set "ZIP=%~dp0..\python-3.12.10-embed-amd64.zip"
 set "ROOT=C:\Program Files\softs"
@@ -26,10 +26,10 @@ if not exist "%DST%\python.exe" (
   if defined INNER (
     echo [python] flattening: "%INNER%" -> "%DST%"
     robocopy "%INNER%" "%DST%" /e /move >nul
-    set "RC=%ERRORLEVEL%"
-    if %RC% GEQ 8 (
+    set "RC=!ERRORLEVEL!"
+    if !RC! GEQ 8 (
       echo [python] flatten failed (robocopy=%RC%)
-      exit /b %RC%
+      exit /b !RC!
     )
     rmdir "%INNER%" 2>nul
   )

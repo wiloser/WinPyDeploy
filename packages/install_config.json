@@ -25,13 +25,10 @@
       "installScript": "scripts/install_python.cmd",
       "expectedPaths": ["%WINPYDEPLOY_INSTALL_DIR%\\Python312\\python.exe"],
       "detectCommands": [
-        "cmd /c \"if exist \\\"%WINPYDEPLOY_INSTALL_DIR%\\Python312\\python.exe\\\" (exit /b 0) else (exit /b 1)\"",
-        "\"%WINPYDEPLOY_INSTALL_DIR%\\Python312\\python.exe\" -m pip --version"
+        "\"%WINPYDEPLOY_PACKAGES_DIR%\\scripts\\info_python.cmd\""
       ],
       "infoCommands": [
-        "\"%WINPYDEPLOY_INSTALL_DIR%\\Python312\\python.exe\" --version",
-        "\"%WINPYDEPLOY_INSTALL_DIR%\\Python312\\python.exe\" -m pip --version",
-        "\"%WINPYDEPLOY_INSTALL_DIR%\\Python312\\python.exe\" -m pip list --format=columns"
+        "\"%WINPYDEPLOY_PACKAGES_DIR%\\scripts\\info_python.cmd\""
       ],
       "detectKeywords": ["python"]
     },
@@ -54,8 +51,9 @@
       "installerType": "zip",
       "targetDir": "%WINPYDEPLOY_INSTALL_DIR%\\MySQL",
       "installScript": "scripts/install_mysql.cmd",
+      "runningProcesses": ["mysqld.exe"],
       "detectCommands": [
-        "\"%WINPYDEPLOY_PACKAGES_DIR%\\scripts\\detect_mysql.cmd\""
+        "\"%WINPYDEPLOY_PACKAGES_DIR%\\scripts\\info_mysql.cmd\""
       ],
       "infoCommands": [
         "\"%WINPYDEPLOY_PACKAGES_DIR%\\scripts\\info_mysql.cmd\""
@@ -71,8 +69,9 @@
       "installerType": "zip",
       "targetDir": "%WINPYDEPLOY_INSTALL_DIR%\\Redis",
       "installScript": "scripts/install_redis.cmd",
+      "runningProcesses": ["redis-server.exe"],
       "detectCommands": [
-        "\"%WINPYDEPLOY_PACKAGES_DIR%\\scripts\\detect_redis.cmd\""
+        "\"%WINPYDEPLOY_PACKAGES_DIR%\\scripts\\info_redis.cmd\""
       ],
       "infoCommands": [
         "\"%WINPYDEPLOY_PACKAGES_DIR%\\scripts\\info_redis.cmd\""
