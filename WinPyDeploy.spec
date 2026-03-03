@@ -9,7 +9,9 @@ root = Path(__file__).resolve().parent
 # Bundle defaults; runtime will copy them into ./packages/ on first run
 datas = [
     (str(root / "packages" / "install_config.json"), "packages"),
-    (str(root / "packages" / "get-pip.py"), "packages"),
+    (str(root / "packages" / "scripts" / "install_python.cmd"), "packages/scripts"),
+    (str(root / "packages" / "scripts" / "install_mysql.cmd"), "packages/scripts"),
+    (str(root / "packages" / "scripts" / "install_redis.cmd"), "packages/scripts"),
 ]
 
 

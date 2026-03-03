@@ -6,7 +6,7 @@ import time
 from collections.abc import Callable
 from pathlib import Path
 from urllib.request import urlopen
-from .models import AppSpec
+from ..core.models import AppSpec
 try:  # optional dependency
     import requests  # type: ignore
 except Exception:  # pragma: no cover

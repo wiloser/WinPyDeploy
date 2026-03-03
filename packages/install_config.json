@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "schemaHint": "可选字段：installCommands(数组) 直接指定命令；或 packageFile/installerType(msi|exe|zip)/silentArgs 指定离线安装包；zip 可配 targetDir 指定解压目录；可选 downloadUrl/sha256 用于缺包时自动下载与校验；可选 postInstallCommands(数组) 做安装后配置；可选 detectCommands(数组) 用命令检测是否已安装。",
+  "schemaHint": "可选字段：installCommands(数组) 直接指定命令；或 installScript(脚本路径，位于 packages/ 内)；或 packageFile/installerType(msi|exe|zip)/silentArgs 指定离线安装包；zip 可配 targetDir 指定解压目录；可选 downloadUrl/sha256 用于缺包时自动下载与校验；可选 postInstallCommands(数组) 或 postInstallScript；可选 detectCommands(数组) 用命令检测是否已安装；可选 infoCommands(数组) 用于显示真实版本/详细信息。",
   "notes": "用于标识安装包与安装策略的元信息（可按需扩展字段）",
   "apps": {
     "node": {
@@ -11,30 +11,26 @@
       "sha256": "",
       "installerType": "msi",
       "detectCommands": ["where node", "node -v"],
+      "infoCommands": ["node -v", "npm -v"],
       "detectKeywords": ["node", "nodejs"]
     },
     "python": {
       "name": "Python",
-      "notes": "绿色版（embeddable zip）解压安装 + PATH 置顶；可选 pipBootstrap + extraFiles（get-pip.py/whl）实现离线 pip",
+      "notes": "绿色版 zip 解压安装 + 配置环境变量（你已打包好 pip，无需 get-pip/pipBootstrap）",
       "packageFile": "python-3.12.10-embed-amd64.zip",
-      "downloadUrl": "https://www.python.org/ftp/python/3.12.10/python-3.12.10-embed-amd64.zip",
+      "downloadUrl": "https://gitee.com/allinth/downloadpub/releases/download/python-3.12.10-amd64/python-3.12.10-amd64.zip",
       "sha256": "",
       "installerType": "zip",
-      "targetDir": "C:\\Program Files\\Python312",
-      "pipBootstrap": true,
-      "extraFiles": [
-        {
-          "file": "get-pip.py",
-          "downloadUrl": "",
-          "sha256": ""
-        }
-      ],
-      "postInstallCommands": [
-        "powershell -NoProfile -ExecutionPolicy Bypass -Command \"$p='C:\\Program Files\\Python312';$s='C:\\Program Files\\Python312\\Scripts';$path=[Environment]::GetEnvironmentVariable('Path','Machine');$parts=$path -split ';' | Where-Object {$_ -and $_ -ne $p -and $_ -ne $s};$new=($p,$s)+$parts;[Environment]::SetEnvironmentVariable('Path',($new -join ';'),'Machine')\""
-      ],
+      "targetDir": "C:\\Program Files\\softs\\Python312",
+      "installScript": "scripts/install_python.cmd",
       "detectCommands": [
-        "\"C:\\Program Files\\Python312\\python.exe\" --version",
-        "\"C:\\Program Files\\Python312\\python.exe\" -m pip --version"
+        "cmd /c \"if exist \\\"C:\\Program Files\\softs\\Python312\\python.exe\\\" (exit /b 0) else (exit /b 1)\"",
+        "\"C:\\Program Files\\softs\\Python312\\python.exe\" -m pip --version"
+      ],
+      "infoCommands": [
+        "\"C:\\Program Files\\softs\\Python312\\python.exe\" --version",
+        "\"C:\\Program Files\\softs\\Python312\\python.exe\" -m pip --version",
+        "\"C:\\Program Files\\softs\\Python312\\python.exe\" -m pip list --format=columns"
       ],
       "detectKeywords": ["python"]
     },
@@ -50,31 +46,32 @@
     },
     "mysql": {
       "name": "MySQL",
-      "notes": "绿色版 zip 解压安装：初始化 data + 安装/启动服务(MySQL80) + 写死 root 密码",
+      "notes": "绿色版 zip 解压安装 + 配置环境变量（不装服务/不初始化/不改密码）",
       "packageFile": "mysql-8.0.45-winx64.zip",
       "downloadUrl": "https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-8.0.45-winx64.zip",
       "sha256": "",
       "installerType": "zip",
-      "targetDir": "C:\\Program Files\\MySQL",
-      "postInstallCommands": [
-        "powershell -NoProfile -ExecutionPolicy Bypass -Command \"$root='C:\\Program Files\\MySQL';$pw='123456';$d=Get-ChildItem -Directory $root -ErrorAction SilentlyContinue|?{$_.Name -like 'mysql-*winx64*'}|select -First 1;$base=if($d){$d.FullName}else{$root};$bin=Join-Path $base 'bin';$mysqld=Join-Path $bin 'mysqld.exe';$mysqladmin=Join-Path $bin 'mysqladmin.exe';$data=Join-Path $base 'data';New-Item -ItemType Directory -Force -Path $data|Out-Null;$ini=Join-Path $base 'my.ini';if(-not(Test-Path $ini)){$lines=@('[mysqld]',('basedir='+$base),('datadir='+$data),'port=3306','');Set-Content -Encoding ASCII -Path $ini -Value $lines};if(-not(Test-Path (Join-Path $data 'mysql'))){& $mysqld --initialize-insecure --basedir=\"$base\" --datadir=\"$data\";if($LASTEXITCODE -ne 0){throw 'mysqld init failed'}};if(-not(Get-Service -Name 'MySQL80' -ErrorAction SilentlyContinue)){& $mysqld --install MySQL80 --defaults-file=\"$ini\";if($LASTEXITCODE -ne 0){throw 'service install failed'}};try{Start-Service -Name MySQL80 -ErrorAction Stop}catch{};Start-Sleep -Seconds 2;& $mysqladmin -u root status 2>$null;if($LASTEXITCODE -eq 0){& $mysqladmin -u root password $pw;if($LASTEXITCODE -ne 0){throw 'set password failed'}}\"",
-        "powershell -NoProfile -ExecutionPolicy Bypass -Command \"$root='C:\\Program Files\\MySQL';$d=Get-ChildItem -Directory $root -ErrorAction SilentlyContinue|?{$_.Name -like 'mysql-*winx64*'}|select -First 1;$base=if($d){$d.FullName}else{$root};$bin=Join-Path $base 'bin';$path=[Environment]::GetEnvironmentVariable('Path','Machine');$parts=$path -split ';' | Where-Object {$_ -and $_ -ne $bin};$new=($bin)+$parts;[Environment]::SetEnvironmentVariable('Path',($new -join ';'),'Machine');Write-Output ('已将 MySQL bin 置顶到 PATH: '+$bin)\""
+      "targetDir": "C:\\Program Files\\softs\\MySQL",
+      "installScript": "scripts/install_mysql.cmd",
+      "detectCommands": [
+        "cmd /c \"for /r \\\"C:\\Program Files\\softs\\MySQL\\\" %F in (mysqld.exe) do exit /b 0 & exit /b 1\""
       ],
-      "detectCommands": ["sc query MySQL80"],
+      "infoCommands": ["where mysqld", "mysqld --version", "where mysql", "mysql --version"],
       "detectKeywords": ["mysql"]
     },
     "redis": {
       "name": "Redis",
-      "notes": "绿色版 zip 解压安装：安装/启动服务(Redis) + PATH 置顶（需使用支持 Windows Service 的 redis-server.exe 发行包）",
+      "notes": "绿色版 zip 解压安装 + 配置环境变量（不装服务）",
       "packageFile": "redis-windows-x64.zip",
-      "downloadUrl": "",
+      "downloadUrl": "https://gitee.com/allinth/downloadpub/releases/download/Redis-8.6.1-Windows-x64-cygwin/Redis-8.6.1-Windows-x64-cygwin.zip",
       "sha256": "",
       "installerType": "zip",
-      "targetDir": "C:\\Program Files\\Redis",
-      "postInstallCommands": [
-        "powershell -NoProfile -ExecutionPolicy Bypass -Command \"$root='C:\\Program Files\\Redis';$exe=Get-ChildItem -Path $root -Recurse -Filter redis-server.exe -ErrorAction SilentlyContinue | Select -First 1 -ExpandProperty FullName; if(-not $exe){throw 'redis-server.exe not found'}; $bin=Split-Path $exe; $path=[Environment]::GetEnvironmentVariable('Path','Machine');$parts=$path -split ';' | Where-Object {$_ -and $_ -ne $bin};$new=($bin)+$parts;[Environment]::SetEnvironmentVariable('Path',($new -join ';'),'Machine');$conf=Join-Path $bin 'redis.windows.conf';$data=Join-Path $root 'data';New-Item -ItemType Directory -Force -Path $data|Out-Null; if(-not(Test-Path $conf)){$lines=@('port 6379',('dir '+$data),('logfile '+(Join-Path $root 'redis.log')),'');Set-Content -Encoding ASCII -Path $conf -Value $lines}; if(-not(Get-Service -Name 'Redis' -ErrorAction SilentlyContinue)){& $exe --service-install $conf; if($LASTEXITCODE -ne 0){throw 'redis service install failed'}}; try{Start-Service -Name Redis -ErrorAction Stop}catch{& $exe --service-start; if($LASTEXITCODE -ne 0){throw 'redis service start failed'}}\""
+      "targetDir": "C:\\Program Files\\softs\\Redis",
+      "installScript": "scripts/install_redis.cmd",
+      "detectCommands": [
+        "cmd /c \"for /r \\\"C:\\Program Files\\softs\\Redis\\\" %F in (redis-server.exe) do exit /b 0 & exit /b 1\""
       ],
-      "detectCommands": ["sc query Redis"],
+      "infoCommands": ["where redis-server", "redis-server --version", "where redis-cli", "redis-cli --version"],
       "detectKeywords": ["redis"]
     }
   }

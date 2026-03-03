@@ -2,8 +2,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from .models import AppSpec
-from .paths import install_config_path, packages_dir
-from .spec_tools import apply_pip_bootstrap, parse_extra_files
+from .paths import ensure_install_config, install_config_path, packages_dir, install_dir
+from ..utils.spec_tools import parse_extra_files
 
 def _safe_package_path(package_file: str) -> str:
     base = packages_dir().resolve()
@@ -12,8 +12,7 @@ def _safe_package_path(package_file: str) -> str:
         raise ValueError(f"packageFile 不允许越出 packages/: {package_file}")
     return str(candidate)
 
-
-def _commands_from_package(spec: dict) -> list[str]:
+def _commands_from_package(app_id: str, spec: dict) -> list[str]:
     package_file = spec.get("packageFile")
     if not package_file:
         return []
@@ -23,22 +22,29 @@ def _commands_from_package(spec: dict) -> list[str]:
     if installer_type == "msi":
         return [f'msiexec /i "{path}" /qn']
     if installer_type == "zip":
-        target_dir = str(spec.get("targetDir") or spec.get("target_dir") or r"C:\\Python312").strip()
-        ps = (
-            "powershell -NoProfile -ExecutionPolicy Bypass -Command "
-            f"\"$src='{path}';$dst='{target_dir}';"
-            "Unblock-File -LiteralPath $src -ErrorAction SilentlyContinue;"
-            "New-Item -ItemType Directory -Force -Path $dst | Out-Null;"
-            "Expand-Archive -LiteralPath $src -DestinationPath $dst -Force\""
-        )
-        return [ps]
+        target_dir = str(spec.get("targetDir") or spec.get("target_dir") or "").strip()
+        if not target_dir:
+            root = install_dir()
+            if root is not None:
+                target_dir = str(root / app_id)
+        if not target_dir:
+            target_dir = r"C:\\Python312"
+        return [f'mkdir "{target_dir}" 2>nul & tar -xf "{path}" -C "{target_dir}"']
     if installer_type == "exe":
         return [f'"{path}" {silent_args}'.rstrip()]
     return [f'"{path}" {silent_args}'.rstrip()]
 
+def _commands_from_script(spec: dict) -> list[str]:
+    script = str(spec.get("installScript") or spec.get("install_script") or "").strip()
+    if not script:
+        return []
+    return [f'"{_safe_package_path(script)}"']
 
 def load_catalog(config_path: Path | None = None) -> tuple[AppSpec, ...]:
     path = config_path or install_config_path()
+    if not path.exists():
+        ensure_install_config()
+        path = config_path or install_config_path()
     data = json.loads(path.read_text(encoding="utf-8"))
     apps: dict[str, dict] = data.get("apps", {})
 
@@ -59,15 +65,18 @@ def load_catalog(config_path: Path | None = None) -> tuple[AppSpec, ...]:
         detect = spec.get("detectCommands") or spec.get("detect_commands") or []
         detect_commands = tuple(str(c) for c in detect if str(c).strip())
 
-        commands = spec.get("installCommands") or spec.get("install_commands")
-        if not commands:
-            commands = _commands_from_package(spec)
-        if not commands:
-            commands = []
+        info = spec.get("infoCommands") or spec.get("info_commands") or []
+        info_commands = tuple(str(c) for c in info if str(c).strip())
+
+        commands = spec.get("installCommands") or spec.get("install_commands") or _commands_from_script(spec) or _commands_from_package(str(app_id), spec) or []
         install_commands = tuple(str(c) for c in commands if str(c).strip())
 
         post = spec.get("postInstallCommands") or spec.get("post_install_commands") or []
         post_install_commands = [str(c) for c in post if str(c).strip()]
+
+        post_script = str(spec.get("postInstallScript") or spec.get("post_install_script") or "").strip()
+        if post_script:
+            post_install_commands.insert(0, f'"{_safe_package_path(post_script)}"')
 
         package_path = ""
         package_file = spec.get("packageFile")
@@ -77,7 +86,6 @@ def load_catalog(config_path: Path | None = None) -> tuple[AppSpec, ...]:
         sha256 = str(spec.get("sha256") or "").strip()
 
         extra_files = parse_extra_files(spec, _safe_package_path)
-        post_install_commands_t = apply_pip_bootstrap(spec, extra_files, post_install_commands)
 
         catalog.append(
             AppSpec(
@@ -90,7 +98,8 @@ def load_catalog(config_path: Path | None = None) -> tuple[AppSpec, ...]:
                 sha256=sha256,
                 extra_files=extra_files,
                 detect_commands=detect_commands,
-                post_install_commands=post_install_commands_t,
+                info_commands=info_commands,
+                post_install_commands=tuple(post_install_commands),
                 notes=notes,
             )
         )

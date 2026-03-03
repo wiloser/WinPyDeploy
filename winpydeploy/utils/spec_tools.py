@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from .models import ExtraFile
-from .paths import packages_dir
+from ..core.models import ExtraFile
+from ..core.paths import packages_dir
 
 
 def parse_extra_files(spec: dict, safe_path) -> tuple[ExtraFile, ...]:

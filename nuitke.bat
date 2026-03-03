@@ -2,10 +2,9 @@
 echo 开始打包...
 python -m nuitka --standalone --show-progress --plugin-enable=tk-inter --output-dir=out ^
 	--include-data-file=packages\install_config.json=packages\install_config.json ^
-	--include-data-file=packages\get-pip.py=packages\get-pip.py ^
-	--include-data-file=packages\pip-26.0.1-py3-none-any.whl=packages\pip-26.0.1-py3-none-any.whl ^
-	--include-data-file=packages\setuptools-82.0.0-py3-none-any.whl=packages\setuptools-82.0.0-py3-none-any.whl ^
-	--include-data-file=packages\wheel-0.46.3-py3-none-any.whl=packages\wheel-0.46.3-py3-none-any.whl ^
+	--include-data-file=packages\scripts\install_python.cmd=packages\scripts\install_python.cmd ^
+	--include-data-file=packages\scripts\install_mysql.cmd=packages\scripts\install_mysql.cmd ^
+	--include-data-file=packages\scripts\install_redis.cmd=packages\scripts\install_redis.cmd ^
 	main.py
 
 echo 重命名目录...

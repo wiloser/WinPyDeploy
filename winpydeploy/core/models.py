@@ -21,5 +21,6 @@ class AppSpec:
     sha256: str = ""
     extra_files: tuple[ExtraFile, ...] = ()
     detect_commands: tuple[str, ...] = ()
+    info_commands: tuple[str, ...] = ()
     post_install_commands: tuple[str, ...] = ()
     notes: str = ""

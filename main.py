@@ -1,20 +1,12 @@
 import tkinter as tk
-from tkinter import ttk
 
 from winpydeploy.ui.app import WinPyDeployApp
-from winpydeploy.paths import ensure_install_config
+from winpydeploy.core.paths import ensure_install_config
 
 
 def main() -> None:
     ensure_install_config()
     root = tk.Tk()
-
-    style = ttk.Style(root)
-    try:
-        style.theme_use("aqua")
-    except tk.TclError:
-        pass
-
     WinPyDeployApp(root)
     root.mainloop()
 
