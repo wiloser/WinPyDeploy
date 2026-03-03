@@ -55,6 +55,15 @@ if not exist "%DST%\python.exe" (
   )
 )
 
+if not exist "%DST%\python.exe" (
+  echo [python] python.exe not found after extraction
+  exit /b 1
+)
+
+echo [python] installing setuptools + wheel...
+"%DST%\python.exe" -m pip install setuptools wheel
+if errorlevel 1 exit /b %errorlevel%
+
 rem PATH is injected by WinPyDeploy runtime env; no registry writes here.
 echo [python] done. (only unzip; PATH is injected)
 exit /b 0
