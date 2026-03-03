@@ -26,5 +26,5 @@ if not exist "!MYSQD!" (
 )
 
 echo starting mysql: "!MYSQD!"
-start "" /b "!MYSQD!"
+start "" /min "!MYSQD!"
 exit /b 0

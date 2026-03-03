@@ -75,6 +75,11 @@ class WinPyDeployController:
                 self.view.log(f"运行管理失败（exit={proc.returncode}）")
             else:
                 self.view.log("运行管理完成。")
+        except subprocess.TimeoutExpired:
+            if action == "start":
+                self.view.log("启动命令已提交（后台启动中）。")
+            else:
+                self.view.log("运行管理超时，请稍后检查运行状态。")
         except Exception as exc:
             self.view.log(f"运行管理异常：{exc}")
         finally:

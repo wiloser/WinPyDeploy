@@ -1,15 +1,8 @@
-import tkinter as tk
+class data():
+    def __init__(self, name, age):
+        self.name = name
+        self.age = age
 
-from winpydeploy.ui.app import WinPyDeployApp
-from winpydeploy.core.paths import ensure_install_config
-
-
-def main() -> None:
-    ensure_install_config()
-    root = tk.Tk()
-    WinPyDeployApp(root)
-    root.mainloop()
-
-
-if __name__ == "__main__":
-    main()
+    def toDict(self):
+        
+    def fromDict(self):

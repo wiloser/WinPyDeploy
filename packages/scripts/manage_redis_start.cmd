@@ -28,5 +28,5 @@ if not exist "!SERVER!" (
 )
 
 echo starting redis: "!SERVER!"
-start "" /b "!SERVER!"
+start "" /min "!SERVER!"
 exit /b 0
