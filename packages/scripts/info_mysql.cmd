@@ -14,8 +14,13 @@ if not exist "%BASE%" (
 set "MYSQD="
 for /r "%BASE%" %%F in (mysqld.exe) do if not defined MYSQD set "MYSQD=%%~fF"
 if defined MYSQD (
+  set "MYSQD=%MYSQD:"=%"
   echo %MYSQD%
-  "%MYSQD%" --version
+  if exist "%MYSQD%" (
+    "%MYSQD%" --version
+  ) else (
+    echo mysqld.exe path invalid: "%MYSQD%"
+  )
 ) else (
   echo mysqld.exe not found under "%BASE%"
 )
@@ -23,8 +28,13 @@ if defined MYSQD (
 set "MYSQL="
 for /r "%BASE%" %%F in (mysql.exe) do if not defined MYSQL set "MYSQL=%%~fF"
 if defined MYSQL (
+  set "MYSQL=%MYSQL:"=%"
   echo %MYSQL%
-  "%MYSQL%" --version
+  if exist "%MYSQL%" (
+    "%MYSQL%" --version
+  ) else (
+    echo mysql.exe path invalid: "%MYSQL%"
+  )
 ) else (
   echo mysql.exe not found under "%BASE%"
 )

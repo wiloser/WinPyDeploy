@@ -254,7 +254,13 @@ def ensure_install_config() -> Path:
                         b"WinPyDeploy helper script",
                     )
                     if all(m in b for m in required):
-                        continue
+                        # Ensure we have the quote-sanitization logic (either in detect or info scripts)
+                        if (
+                            b"%FOUND:\"=%" in b
+                            or b"%SERVER:\"=%" in b
+                            or b"%MYSQD:\"=%" in b
+                        ):
+                            continue
             except Exception:
                 continue
         bundled = _bundled_packages_file(f"scripts/{name}")
