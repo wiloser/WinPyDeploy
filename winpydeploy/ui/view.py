@@ -2,6 +2,7 @@ from __future__ import annotations
 import time
 import tkinter as tk
 from tkinter import ttk, font
+from collections.abc import Callable
 from ..core.models import AppSpec
 
 class WinPyDeployView(ttk.Frame):
@@ -138,7 +139,11 @@ class WinPyDeployView(ttk.Frame):
         self._bind_mouse_wheel(self.task_list, y=True, x=False)
         self.btn_cancel_task = ttk.Button(taskf, text="取消选中任务", style="Toolbar.TButton"); self.btn_cancel_task.grid(row=1, column=0, columnspan=1, sticky="ew", pady=(gap, 0))
         self._task_ids = []
+        self._log_sink: Callable[[str], None] | None = None
         self.pack(fill=tk.BOTH, expand=True)
+
+    def set_log_sink(self, sink: Callable[[str], None] | None) -> None:
+        self._log_sink = sink
 
     def set_handlers(self, *, on_refresh, on_select_missing, on_settings, on_download, on_install, on_tree_select, on_cancel_task) -> None:
         self.btn_refresh.configure(command=on_refresh); self.btn_select_missing.configure(command=on_select_missing)
@@ -149,7 +154,10 @@ class WinPyDeployView(ttk.Frame):
 
     def log(self, line: str) -> None:
         ts = time.strftime("%H:%M:%S")
-        self.log_text.insert(tk.END, f"[{ts}] {line}\n"); self.log_text.see(tk.END)
+        msg = f"[{ts}] {line}"
+        self.log_text.insert(tk.END, msg + "\n"); self.log_text.see(tk.END)
+        if self._log_sink:
+            self._log_sink(msg)
 
     def rebuild_tree(self, catalog: tuple[AppSpec, ...], installed: dict[str, bool], selected: set[str], package_ok: dict[str, bool], errors: dict[str, str], versions: dict[str, str]) -> None:
         self.tree.delete(*self.tree.get_children())

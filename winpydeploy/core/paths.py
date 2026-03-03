@@ -260,7 +260,7 @@ def ensure_install_config() -> Path:
                     return True
                 # bump specific scripts when we strengthen flattening behavior
                 if name in ("install_redis.cmd", "install_mysql.cmd", "install_python.cmd"):
-                    return b"flatten-v2" not in existing
+                    return b"flatten-v3" not in existing
                 return False
             return False
 

@@ -28,7 +28,7 @@ tar -xf "%ZIP%" -C "%DST%"
 if errorlevel 1 exit /b %errorlevel%
 
 rem Flatten common zip layout: %DST%\python-3.x-embed-amd64\python.exe -> %DST%\python.exe
-rem flatten-v2: supports deeper nested layouts by recursively locating python.exe
+rem flatten-v3: supports deeper nested layouts; safer echo/exit behavior inside blocks
 if not exist "%DST%\python.exe" (
   set "INNER="
   for /d %%D in ("%DST%\*") do (
@@ -48,7 +48,7 @@ if not exist "%DST%\python.exe" (
     robocopy "%INNER%" "%DST%" /e /move >nul
     set "RC=!ERRORLEVEL!"
     if !RC! GEQ 8 (
-      echo [python] flatten failed (robocopy=!RC!)
+      echo [python] flatten failed. robocopy=!RC!
       exit /b !RC!
     )
     rmdir "%INNER%" 2>nul

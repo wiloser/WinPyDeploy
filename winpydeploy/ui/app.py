@@ -5,6 +5,9 @@ import queue
 import tkinter as tk
 from tkinter import ttk
 
+from ..core.paths import packages_dir
+from ..utils.file_logger import FileLogger
+
 try:
     from ..workers.installer import InstallEvent
     from .controller import WinPyDeployController
@@ -45,6 +48,10 @@ class WinPyDeployApp:
             pass
         self._event_q: "queue.Queue[InstallEvent]" = queue.Queue()
         self.view = WinPyDeployView(root)
+
+        # File logging (append-only). Stored under packagesDir/logs for easy access.
+        logger = FileLogger.create(packages_dir() / "logs")
+        self.view.set_log_sink(logger.append)
         self.controller = WinPyDeployController(self.view, self._event_q)
         self.view.set_handlers(
             on_refresh=self.controller.refresh_detection,
@@ -56,6 +63,7 @@ class WinPyDeployApp:
             on_cancel_task=self.controller.cancel_selected_task,
         )
         self.controller.refresh_detection()
+        self.view.log(f"日志文件：{logger.path}")
         self.controller.start_service_polling(root)
         root.after(100, self._drain_events)
 
