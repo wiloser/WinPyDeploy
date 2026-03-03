@@ -1,6 +1,7 @@
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
 rem WinPyDeploy helper script (no registry writes)
+rem manage-v2: auto-init datadir and verify mysqld startup
 
 set "MYSQD="
 for /f "delims=" %%F in ('where mysqld.exe 2^>nul') do if not defined MYSQD set "MYSQD=%%~fF"
@@ -25,6 +26,38 @@ if not exist "!MYSQD!" (
   exit /b 1
 )
 
+for %%P in ("!MYSQD!\..") do set "BIN=%%~fP"
+for %%P in ("!BIN!\..") do set "BASE=%%~fP"
+set "DATA=!BASE!\data"
+set "PORT=3306"
+
+rem If already running, treat as success.
+tasklist /FI "IMAGENAME eq mysqld.exe" | find /I "mysqld.exe" >nul
+if not errorlevel 1 (
+  echo mysqld already running
+  exit /b 0
+)
+
+rem First-run init for zip distribution.
+if not exist "!DATA!\mysql" (
+  echo initializing mysql data dir: "!DATA!"
+  mkdir "!DATA!" 2>nul
+  "!MYSQD!" --initialize-insecure --basedir="!BASE!" --datadir="!DATA!"
+  if errorlevel 1 (
+    echo mysql initialize failed
+    exit /b 2
+  )
+)
+
 echo starting mysql: "!MYSQD!"
-start "" /min "!MYSQD!"
+start "" /min "!MYSQD!" --standalone --basedir="!BASE!" --datadir="!DATA!" --port=!PORT!
+
+timeout /t 2 /nobreak >nul
+tasklist /FI "IMAGENAME eq mysqld.exe" | find /I "mysqld.exe" >nul
+if errorlevel 1 (
+  echo mysql start failed (mysqld not running)
+  exit /b 3
+)
+
+echo mysql started on port !PORT!
 exit /b 0

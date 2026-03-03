@@ -1,6 +1,7 @@
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
 rem WinPyDeploy helper script (no registry writes)
+rem manage-v2: PATH-first launch behavior
 
 set "SERVER="
 for /f "delims=" %%F in ('where redis-server.exe 2^>nul') do if not defined SERVER set "SERVER=%%~fF"
