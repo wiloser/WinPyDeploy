@@ -18,11 +18,26 @@ tar -xf "%ZIP%" -C "%DST%"
 if errorlevel 1 exit /b %errorlevel%
 
 rem Flatten common zip layout: %DST%\Redis-8.x\redis-server.exe -> %DST%\redis-server.exe
-if not exist "%DST%\redis-server.exe" (
+rem flatten-v2: supports deeper nested layouts by recursively locating redis-server.exe
+if not exist "%DST%\redis-server.exe" if not exist "%DST%\bin\redis-server.exe" (
   set "INNER="
   for /d %%D in ("%DST%\*") do (
     if exist "%%~fD\redis-server.exe" if not defined INNER set "INNER=%%~fD"
     if exist "%%~fD\bin\redis-server.exe" if not defined INNER set "INNER=%%~fD"
+  )
+  if not defined INNER (
+    for /r "%DST%" %%F in (redis-server.exe) do (
+      if not defined INNER (
+        set "EXEDIR=%%~dpF"
+        set "EXEDIR=!EXEDIR:~0,-1!"
+        for %%P in ("!EXEDIR!") do set "EXENAME=%%~nxP"
+        if /i "!EXENAME!"=="bin" (
+          for %%U in ("!EXEDIR!\..") do set "INNER=%%~fU"
+        ) else (
+          set "INNER=!EXEDIR!"
+        )
+      )
+    )
   )
   if defined INNER (
     echo [redis] flattening: "%INNER%" -> "%DST%"

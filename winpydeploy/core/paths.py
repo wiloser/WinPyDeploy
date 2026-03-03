@@ -256,7 +256,12 @@ def ensure_install_config() -> Path:
                 return True
             # Require flattening logic for our zip installers
             if name in ("install_python.cmd", "install_mysql.cmd", "install_redis.cmd"):
-                return not (b"robocopy" in existing and b"flattening" in existing)
+                if not (b"robocopy" in existing and b"flattening" in existing):
+                    return True
+                # bump specific scripts when we strengthen flattening behavior
+                if name in ("install_redis.cmd", "install_mysql.cmd", "install_python.cmd"):
+                    return b"flatten-v2" not in existing
+                return False
             return False
 
         if name.startswith("info_"):

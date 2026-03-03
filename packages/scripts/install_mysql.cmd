@@ -18,10 +18,25 @@ tar -xf "%ZIP%" -C "%DST%"
 if errorlevel 1 exit /b %errorlevel%
 
 rem Flatten common zip layout: %DST%\mysql-8.x\bin\... -> %DST%\bin\...
+rem flatten-v2: supports deeper nested layouts by recursively locating mysqld.exe
 if not exist "%DST%\bin\mysqld.exe" (
   set "INNER="
   for /d %%D in ("%DST%\*") do (
     if exist "%%~fD\bin\mysqld.exe" if not defined INNER set "INNER=%%~fD"
+  )
+  if not defined INNER (
+    for /r "%DST%" %%F in (mysqld.exe) do (
+      if not defined INNER (
+        set "EXEDIR=%%~dpF"
+        set "EXEDIR=!EXEDIR:~0,-1!"
+        for %%P in ("!EXEDIR!") do set "EXENAME=%%~nxP"
+        if /i "!EXENAME!"=="bin" (
+          for %%U in ("!EXEDIR!\..") do set "INNER=%%~fU"
+        ) else (
+          set "INNER=!EXEDIR!"
+        )
+      )
+    )
   )
   if defined INNER (
     echo [mysql] flattening: "%INNER%" -> "%DST%"

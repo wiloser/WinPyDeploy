@@ -18,10 +18,20 @@ tar -xf "%ZIP%" -C "%DST%"
 if errorlevel 1 exit /b %errorlevel%
 
 rem Flatten common zip layout: %DST%\python-3.x-embed-amd64\python.exe -> %DST%\python.exe
+rem flatten-v2: supports deeper nested layouts by recursively locating python.exe
 if not exist "%DST%\python.exe" (
   set "INNER="
   for /d %%D in ("%DST%\*") do (
     if exist "%%~fD\python.exe" if not defined INNER set "INNER=%%~fD"
+  )
+  if not defined INNER (
+    for /r "%DST%" %%F in (python.exe) do (
+      if not defined INNER (
+        set "EXEDIR=%%~dpF"
+        set "EXEDIR=!EXEDIR:~0,-1!"
+        set "INNER=!EXEDIR!"
+      )
+    )
   )
   if defined INNER (
     echo [python] flattening: "%INNER%" -> "%DST%"

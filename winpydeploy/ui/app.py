@@ -37,6 +37,10 @@ class WinPyDeployApp:
             style.configure("Toolbar.TButton", padding=(10, 6))
             style.configure("Treeview", rowheight=24)
             style.configure("Treeview.Heading", font=("TkDefaultFont", 12, "bold"))
+            style.configure("Catalog.Treeview", rowheight=26)
+            style.configure("Catalog.Treeview.Heading", font=("TkDefaultFont", 12, "bold"))
+            style.configure("Status.Treeview", rowheight=20)
+            style.configure("Status.Treeview.Heading", font=("TkDefaultFont", 11, "bold"))
         except Exception:
             pass
         self._event_q: "queue.Queue[InstallEvent]" = queue.Queue()
@@ -52,6 +56,7 @@ class WinPyDeployApp:
             on_cancel_task=self.controller.cancel_selected_task,
         )
         self.controller.refresh_detection()
+        self.controller.start_service_polling(root)
         root.after(100, self._drain_events)
 
     def _drain_events(self) -> None:

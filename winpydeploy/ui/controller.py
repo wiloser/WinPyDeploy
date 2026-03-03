@@ -1,7 +1,12 @@
 from __future__ import annotations
+import csv
+import io
+import platform
 import queue, threading
 from pathlib import Path
 import re
+import subprocess
+import time
 from tkinter import messagebox, filedialog
 import tkinter as tk
 from tkinter import ttk
@@ -25,6 +30,88 @@ class WinPyDeployController:
         self._info_thread: threading.Thread | None = None; self._info: InfoWorker | None = None; self._info_app = ""
         self._suppress_tree_select = False
         self._last_info_app = ""; self._last_info_at = 0.0
+        self._selected_app_id = ""
+        self._root: tk.Misc | None = None
+        self._last_tasklist_at = 0.0
+        self._tasklist_cache: set[str] = set()
+
+    def start_service_polling(self, root: tk.Misc) -> None:
+        self._root = root
+
+        def tick() -> None:
+            try:
+                self._poll_running_status()
+            finally:
+                root.after(1500, tick)
+
+        root.after(400, tick)
+
+    def _tasklist_snapshot(self) -> set[str]:
+        # Cache for a short window to keep UI responsive.
+        now = time.time()
+        if (now - self._last_tasklist_at) < 1.0 and self._tasklist_cache:
+            return self._tasklist_cache
+        if platform.system().lower() != "windows":
+            self._tasklist_cache = set()
+            self._last_tasklist_at = now
+            return self._tasklist_cache
+        try:
+            r = subprocess.run(
+                "tasklist /FO CSV /NH",
+                shell=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL,
+                text=True,
+                errors="replace",
+                timeout=2,
+            )
+            names: set[str] = set()
+            for row in csv.reader(io.StringIO(r.stdout or "")):
+                if not row:
+                    continue
+                name = (row[0] or "").strip().strip('"').lower()
+                if name:
+                    names.add(name)
+            self._tasklist_cache = names
+            self._last_tasklist_at = now
+            return names
+        except Exception:
+            self._tasklist_cache = set()
+            self._last_tasklist_at = now
+            return self._tasklist_cache
+
+    def _update_running_status(self, app_id: str) -> None:
+        spec = self._spec_by_id.get(app_id)
+        if not spec:
+            self.view.set_running_status(items=None, note="")
+            return
+
+        procs = list(getattr(spec, "running_processes", ()) or ())
+        if not procs:
+            self.view.set_running_status(items=None, note="(未配置 runningProcesses)")
+            return
+
+        if platform.system().lower() != "windows":
+            items = [(p, "未知") for p in procs]
+            self.view.set_running_status(items=items, note="(仅 Windows 可检测进程是否运行)")
+            return
+
+        names = self._tasklist_snapshot()
+        items: list[tuple[str, str]] = []
+        for p in procs:
+            name = str(p).strip().strip('"')
+            key = name.lower()
+            if key and not key.endswith(".exe"):
+                key = key + ".exe"
+                name = name if name.lower().endswith(".exe") else name + ".exe"
+            items.append((name, "运行中" if key in names else "未运行"))
+        ts = time.strftime("%H:%M:%S")
+        self.view.set_running_status(items=items, note=f"最后刷新：{ts}")
+
+    def _poll_running_status(self) -> None:
+        if not self._selected_app_id:
+            return
+        self._update_running_status(self._selected_app_id)
 
     def _rebuild_tree(self) -> None:
         self._suppress_tree_select = True
@@ -114,9 +201,20 @@ class WinPyDeployController:
         if self._suppress_tree_select:
             return
         sel = self.view.selection(); self._selected = set(sel)
-        if not sel: self.view.set_details(""); return
-        app_id = sel[-1]; spec = self._spec_by_id.get(app_id)
-        if not self._installed.get(app_id, False): self.view.set_details("未安装。\n"); return
+        if not sel:
+            self._selected_app_id = ""
+            self.view.set_details("")
+            self.view.set_running_status(items=None, note="(选择软件后显示运行状态)")
+            return
+
+        app_id = sel[-1]
+        self._selected_app_id = app_id
+        self._update_running_status(app_id)
+
+        spec = self._spec_by_id.get(app_id)
+        if not self._installed.get(app_id, False):
+            self.view.set_details("未安装。\n")
+            return
         if not spec or not spec.info_commands: self.view.set_details("(未配置 infoCommands)\n"); return
         now = __import__("time").time()
         if app_id == self._last_info_app and (now - self._last_info_at) < 1.0:

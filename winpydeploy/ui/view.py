@@ -6,6 +6,7 @@ from ..core.models import AppSpec
 
 class WinPyDeployView(ttk.Frame):
     COL_ID, COL_NAME, COL_STATUS, COL_VER, COL_NOTES = "id", "name", "status", "ver", "notes"
+    PROC_COL_NAME, PROC_COL_STATE = "proc", "state"
 
     def _bind_mouse_wheel(self, widget: tk.Widget, *, y: bool = True, x: bool = False) -> None:
         def _on_wheel(ev: tk.Event) -> str:
@@ -39,6 +40,21 @@ class WinPyDeployView(ttk.Frame):
         master.title("WinPyDeploy - 软件安装管理(原型)"); master.minsize(920, 560)
         padx=pady=10; inner=6; gap=6
         self.grid_rowconfigure(1, weight=1); self.grid_columnconfigure(0, weight=1)
+
+        def _mix_with_white(hex_color: str, ratio: float) -> str | None:
+            try:
+                s = (hex_color or "").strip()
+                if not (s.startswith("#") and len(s) == 7):
+                    return None
+                r = int(s[1:3], 16)
+                g = int(s[3:5], 16)
+                b = int(s[5:7], 16)
+                r2 = int(r + (255 - r) * ratio)
+                g2 = int(g + (255 - g) * ratio)
+                b2 = int(b + (255 - b) * ratio)
+                return f"#{r2:02x}{g2:02x}{b2:02x}"
+            except Exception:
+                return None
         toolbar = ttk.Frame(self); toolbar.grid(row=0, column=0, sticky="ew", padx=padx, pady=(pady, gap))
         left, right = ttk.Frame(toolbar), ttk.Frame(toolbar); left.pack(side=tk.LEFT, fill=tk.X, expand=True); right.pack(side=tk.RIGHT)
         self.btn_refresh, self.btn_select_missing = (ttk.Button(left, text="刷新已安装状态", style="Toolbar.TButton"), ttk.Button(left, text="选择所有未安装", style="Toolbar.TButton"))
@@ -53,20 +69,61 @@ class WinPyDeployView(ttk.Frame):
         treef, detf = ttk.Labelframe(top2, text="软件列表", padding=inner), ttk.Labelframe(top2, text="详细信息", padding=inner)
         top2.add(treef, weight=3); top2.add(detf, weight=2)
         treef.grid_rowconfigure(0, weight=1); treef.grid_columnconfigure(0, weight=1)
-        self.tree = ttk.Treeview(treef, columns=(self.COL_ID, self.COL_NAME, self.COL_STATUS, self.COL_VER, self.COL_NOTES), show="headings", selectmode="extended")
+        self.tree = ttk.Treeview(
+            treef,
+            columns=(self.COL_ID, self.COL_NAME, self.COL_STATUS, self.COL_VER, self.COL_NOTES),
+            show="headings",
+            selectmode="extended",
+            style="Catalog.Treeview",
+        )
         for col, text, width in ((self.COL_ID, "ID", 120), (self.COL_NAME, "软件", 260), (self.COL_STATUS, "状态", 120), (self.COL_VER, "版本", 140), (self.COL_NOTES, "备注", 240)):
             self.tree.heading(col, text=text); self.tree.column(col, width=width, anchor=tk.W)
         for c in (self.COL_ID, self.COL_STATUS, self.COL_VER): self.tree.column(c, stretch=False)
         self.tree.column(self.COL_NAME, stretch=True); self.tree.column(self.COL_NOTES, stretch=True)
+        self.tree.column(self.COL_STATUS, anchor=tk.CENTER)
+        self.tree.column(self.COL_VER, anchor=tk.CENTER)
         self._bold = font.Font(**{**font.nametofont("TkDefaultFont").actual(), "weight": "bold"}); self.tree.tag_configure("missing", font=self._bold)
+
+        # Zebra stripes (derived from theme background; avoids hard-coded colors)
+        try:
+            st = ttk.Style(master)
+            base_bg = st.lookup("Treeview", "fieldbackground") or st.lookup("Treeview", "background")
+            alt_bg = _mix_with_white(base_bg, 0.06) if base_bg else None
+            if base_bg and base_bg.startswith("#"):
+                self.tree.tag_configure("row_even", background=base_bg)
+                if alt_bg:
+                    self.tree.tag_configure("row_odd", background=alt_bg)
+        except Exception:
+            pass
         yscroll = ttk.Scrollbar(treef, orient=tk.VERTICAL, command=self.tree.yview); self.tree.configure(yscrollcommand=yscroll.set)
         self.tree.grid(row=0, column=0, sticky="nsew")
         self._bind_mouse_wheel(self.tree, y=True, x=False)
-        detf.grid_rowconfigure(0, weight=1); detf.grid_columnconfigure(0, weight=1)
+        detf.grid_rowconfigure(0, weight=1); detf.grid_rowconfigure(1, weight=0)
+        detf.grid_columnconfigure(0, weight=1)
         self.details_text = tk.Text(detf, wrap="none", state=tk.DISABLED, font="TkFixedFont", bd=0, highlightthickness=0, padx=4, pady=2)
         det_v = ttk.Scrollbar(detf, orient=tk.VERTICAL, command=self.details_text.yview); det_h = ttk.Scrollbar(detf, orient=tk.HORIZONTAL, command=self.details_text.xview)
         self.details_text.configure(yscrollcommand=det_v.set, xscrollcommand=det_h.set); self.details_text.grid(row=0, column=0, sticky="nsew")
         self._bind_mouse_wheel(self.details_text, y=True, x=True)
+
+        statusf = ttk.Labelframe(detf, text="运行状态", padding=(inner, inner - 2))
+        statusf.grid(row=1, column=0, sticky="ew", pady=(gap, 0))
+        statusf.grid_columnconfigure(0, weight=1)
+        self.proc_note = ttk.Label(statusf, text="(选择软件后显示运行状态)")
+        self.proc_note.grid(row=0, column=0, sticky="w")
+        self.proc_tree = ttk.Treeview(
+            statusf,
+            columns=(self.PROC_COL_NAME, self.PROC_COL_STATE),
+            show="headings",
+            height=3,
+            selectmode="none",
+            style="Status.Treeview",
+        )
+        self.proc_tree.heading(self.PROC_COL_NAME, text="进程")
+        self.proc_tree.heading(self.PROC_COL_STATE, text="状态")
+        self.proc_tree.column(self.PROC_COL_NAME, width=210, anchor=tk.W, stretch=True)
+        self.proc_tree.column(self.PROC_COL_STATE, width=90, anchor=tk.CENTER, stretch=False)
+        self.proc_tree.grid(row=1, column=0, sticky="ew", pady=(4, 0))
+        self._bind_mouse_wheel(self.proc_tree, y=True, x=False)
         sub = ttk.Panedwindow(bottom, orient=tk.HORIZONTAL); sub.pack(fill=tk.BOTH, expand=True)
         logf, taskf = ttk.Labelframe(sub, text="日志", padding=inner), ttk.Labelframe(sub, text="任务", padding=inner); sub.add(logf, weight=3); sub.add(taskf, weight=1)
         logf.grid_rowconfigure(0, weight=1); logf.grid_columnconfigure(0, weight=1)
@@ -97,20 +154,32 @@ class WinPyDeployView(ttk.Frame):
     def rebuild_tree(self, catalog: tuple[AppSpec, ...], installed: dict[str, bool], selected: set[str], package_ok: dict[str, bool], errors: dict[str, str], versions: dict[str, str]) -> None:
         self.tree.delete(*self.tree.get_children())
         valid_ids = {a.app_id for a in catalog}
-        for app in catalog:
+        for idx, app in enumerate(catalog):
             is_installed = installed.get(app.app_id, False)
             ok = package_ok.get(app.app_id, True)
             status = "已安装" if is_installed else ("未安装" if ok else "未安装(缺包)")
             ver = (versions.get(app.app_id) or "").strip()
             err = (errors.get(app.app_id) or "").strip()
             notes = (err[:120] + "…") if len(err) > 120 else (err or app.notes)
-            tags = () if is_installed else ("missing",)
+            tags = []
+            tags.append("missing" if not is_installed else "")
+            tags.append("row_even" if (idx % 2 == 0) else "row_odd")
+            tags = tuple(t for t in tags if t)
             self.tree.insert("", tk.END, iid=app.app_id, values=(app.app_id, app.name, status, ver, notes), tags=tags)
         self.tree.selection_set([i for i in selected if i in valid_ids])
 
     def set_details(self, text: str) -> None:
         self.details_text.configure(state=tk.NORMAL); self.details_text.delete("1.0", tk.END)
         self.details_text.insert(tk.END, text); self.details_text.see(tk.END); self.details_text.configure(state=tk.DISABLED)
+
+    def set_running_status(self, *, items: list[tuple[str, str]] | None = None, note: str = "") -> None:
+        if note:
+            self.proc_note.configure(text=note)
+        self.proc_tree.delete(*self.proc_tree.get_children())
+        if not items:
+            return
+        for proc, state in items:
+            self.proc_tree.insert("", tk.END, values=(proc, state))
 
     def set_tasks(self, items: list[tuple[str, str]]) -> None:
         self._task_ids = [i for i, _ in items]; self.task_list.delete(0, tk.END)
