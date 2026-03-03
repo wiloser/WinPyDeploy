@@ -17,6 +17,24 @@ echo [mysql] extracting...
 tar -xf "%ZIP%" -C "%DST%"
 if errorlevel 1 exit /b %errorlevel%
 
+rem Flatten common zip layout: %DST%\mysql-8.x\bin\... -> %DST%\bin\...
+if not exist "%DST%\bin\mysqld.exe" (
+  set "INNER="
+  for /d %%D in ("%DST%\*") do (
+    if exist "%%~fD\bin\mysqld.exe" if not defined INNER set "INNER=%%~fD"
+  )
+  if defined INNER (
+    echo [mysql] flattening: "%INNER%" -> "%DST%"
+    robocopy "%INNER%" "%DST%" /e /move >nul
+    set "RC=%ERRORLEVEL%"
+    if %RC% GEQ 8 (
+      echo [mysql] flatten failed (robocopy=%RC%)
+      exit /b %RC%
+    )
+    rmdir "%INNER%" 2>nul
+  )
+)
+
 rem PATH is injected by WinPyDeploy runtime env; no registry writes here.
 echo [mysql] done. (only unzip; PATH is injected)
 exit /b 0

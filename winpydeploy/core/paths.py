@@ -247,7 +247,12 @@ def ensure_install_config() -> Path:
                         b"PATH is injected",
                     )
                     if all(m in b for m in required):
-                        continue
+                        if name in ("install_python.cmd", "install_mysql.cmd", "install_redis.cmd"):
+                            # Require flatten logic marker so older unzip-only scripts get upgraded.
+                            if b"robocopy" in b and b"flattening" in b:
+                                continue
+                        else:
+                            continue
                 else:
                     required = (
                         b"WINPYDEPLOY_INSTALL_DIR",
