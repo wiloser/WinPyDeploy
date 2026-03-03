@@ -36,9 +36,20 @@ class CommandRunner:
                 self._emit("log", app_id, f"安装包不存在：{path}")
                 return 2
 
+        popen_cmd: str | list[str] = cmd
+        popen_shell = True
+
+        # For .cmd/.bat script paths, force execution through `cmd /c call` so
+        # batch `exit /b <code>` is propagated reliably.
+        script_path = self._extract_installer_path(cmd)
+        s = cmd.strip()
+        if script_path and s == f'"{script_path}"' and Path(script_path).suffix.lower() in {".cmd", ".bat"}:
+            popen_cmd = ["cmd.exe", "/d", "/s", "/c", f'call "{script_path}"']
+            popen_shell = False
+
         self._proc = subprocess.Popen(
-            cmd,
-            shell=True,
+            popen_cmd,
+            shell=popen_shell,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,
@@ -51,7 +62,10 @@ class CommandRunner:
             line = line.rstrip("\n")
             if line:
                 self._emit("log", app_id, line)
-        return self._proc.wait()
+        code = self._proc.wait()
+        if code != 0:
+            self._emit("log", app_id, f"命令退出码：{code}")
+        return code
 
     @staticmethod
     def _extract_installer_path(cmd: str) -> str | None:
