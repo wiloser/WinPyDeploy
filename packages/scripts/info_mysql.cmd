@@ -19,8 +19,26 @@ if not defined MYSQD for /r "%BASE%" %%F in (mysqld.exe) do if not defined MYSQD
 set "EC=0"
 if defined MYSQD (
   if exist "!MYSQD!" (
-    "!MYSQD!" --version
-    if errorlevel 1 set "EC=!ERRORLEVEL!"
+    set "VLINE="
+    for /f "usebackq delims=" %%L in (`"!MYSQD!" --version 2^>nul`) do if not defined VLINE set "VLINE=%%L"
+    if defined VLINE (
+      set "VER="
+      for /f "tokens=1,2 delims= " %%A in ("!VLINE!") do (
+        if /i "%%A"=="Ver" set "VER=%%B"
+      )
+      if not defined VER (
+        for /f "tokens=3 delims= " %%A in ("!VLINE!") do set "VER=%%A"
+      )
+      if defined VER (
+        echo MySQL !VER!
+      ) else (
+        echo MySQL
+      )
+      echo !VLINE!
+    ) else (
+      "!MYSQD!" --version
+      if errorlevel 1 set "EC=!ERRORLEVEL!"
+    )
     echo !MYSQD!
   ) else (
     echo mysqld.exe path invalid: "!MYSQD!"

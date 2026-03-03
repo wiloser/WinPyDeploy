@@ -11,7 +11,7 @@ from tkinter import messagebox, filedialog
 import tkinter as tk
 from tkinter import ttk
 from ..core import user_config
-from ..core.paths import DEFAULT_INSTALL_DIR, ensure_install_config, packages_dir, set_packages_dir, install_dir, set_install_dir, project_root
+from ..core.paths import DEFAULT_INSTALL_DIR, ensure_install_config, packages_dir, set_packages_dir, install_dir, set_install_dir, project_root, expand_with_runtime_env, runtime_env
 from ..core.config import load_catalog
 from ..core.detection import detect_installed_apps
 from ..workers.downloader_worker import DownloadWorker
@@ -34,6 +34,58 @@ class WinPyDeployController:
         self._root: tk.Misc | None = None
         self._last_tasklist_at = 0.0
         self._tasklist_cache: set[str] = set()
+        self._versions_bootstrapped = False
+
+    def _can_manage_app(self, app_id: str) -> bool:
+        return app_id in {"redis", "mysql"}
+
+    def _manage_script_path(self, app_id: str, action: str) -> Path:
+        return packages_dir() / "scripts" / f"manage_{app_id}_{action}.cmd"
+
+    def _run_manage_action(self, action: str) -> None:
+        app_id = (self._selected_app_id or "").strip().lower()
+        if not app_id or not self._can_manage_app(app_id):
+            messagebox.showinfo("提示", "仅支持 Redis/MySQL 的运行管理。")
+            return
+        if platform.system().lower() != "windows":
+            messagebox.showinfo("提示", "该功能仅支持 Windows。")
+            return
+        script = self._manage_script_path(app_id, action)
+        if not script.exists():
+            messagebox.showerror("错误", f"管理脚本不存在：{script}")
+            return
+        spec = self._spec_by_id.get(app_id)
+        name = spec.name if spec else app_id
+        try:
+            self.view.log(f"开始{('启动' if action == 'start' else '结束')}：{name}")
+            self.view.log(f"  \"{script}\"")
+            proc = subprocess.Popen(
+                ["cmd.exe", "/d", "/c", "call", str(script)],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                errors="replace",
+            )
+            out, _ = proc.communicate(timeout=12)
+            if out:
+                for ln in out.splitlines():
+                    if ln.strip():
+                        self.view.log(ln)
+            if proc.returncode and proc.returncode != 0:
+                self.view.log(f"运行管理失败（exit={proc.returncode}）")
+            else:
+                self.view.log("运行管理完成。")
+        except Exception as exc:
+            self.view.log(f"运行管理异常：{exc}")
+        finally:
+            self._last_tasklist_at = 0.0
+            self._update_running_status(app_id)
+
+    def start_selected_process(self) -> None:
+        self._run_manage_action("start")
+
+    def stop_selected_process(self) -> None:
+        self._run_manage_action("stop")
 
     def start_service_polling(self, root: tk.Misc) -> None:
         self._root = root
@@ -197,6 +249,46 @@ class WinPyDeployController:
         self._errors = {k: v for k, v in self._errors.items() if k in self._spec_by_id}; self._versions = {k: v for k, v in self._versions.items() if k in self._spec_by_id}
         self._rebuild_tree(); self.view.set_tasks(list(self._tasks.items())); self.view.log("检测完成。")
 
+    def detect_versions_once(self) -> None:
+        if self._versions_bootstrapped:
+            return
+        self._versions_bootstrapped = True
+        if platform.system().lower() != "windows":
+            return
+
+        targets = [a for a in self._catalog if self._installed.get(a.app_id, False) and a.info_commands]
+        if not targets:
+            return
+
+        def pick_first_line(text: str) -> str:
+            for ln in (text or "").splitlines():
+                s = ln.strip()
+                if s and not s.startswith(">"):
+                    return s[:60]
+            return ""
+
+        def work() -> None:
+            for app in targets:
+                try:
+                    cmd = expand_with_runtime_env(str(app.info_commands[0]))
+                    r = subprocess.run(
+                        cmd,
+                        shell=True,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.STDOUT,
+                        text=True,
+                        errors="replace",
+                        timeout=10,
+                        env={**runtime_env()},
+                    )
+                    ver = pick_first_line(r.stdout or "")
+                    if ver:
+                        self._event_q.put(InstallEvent("version_done", app.app_id, ver))
+                except Exception:
+                    continue
+
+        threading.Thread(target=work, daemon=True).start()
+
     def on_tree_select(self, _evt=None) -> None:
         if self._suppress_tree_select:
             return
@@ -205,10 +297,12 @@ class WinPyDeployController:
             self._selected_app_id = ""
             self.view.set_details("")
             self.view.set_running_status(items=None, note="(选择软件后显示运行状态)")
+            self.view.set_proc_actions_enabled(False)
             return
 
         app_id = sel[-1]
         self._selected_app_id = app_id
+        self.view.set_proc_actions_enabled(self._can_manage_app(app_id))
         self._update_running_status(app_id)
 
         spec = self._spec_by_id.get(app_id)
@@ -283,5 +377,8 @@ class WinPyDeployController:
             first = next((ln.strip() for ln in (ev.message or "").splitlines() if ln.strip() and not ln.strip().startswith(">")), "")
             if first: self._versions[ev.app_id] = first[:60]
             self._task(f"info:{ev.app_id}", None); self._rebuild_tree()
+        elif ev.kind == "version_done" and ev.message:
+            self._versions[ev.app_id] = ev.message[:60]
+            self._rebuild_tree()
         elif ev.kind in {"download_all_done", "all_done"}:
             self.view.set_busy(False); self.view.log("下载任务已结束。" if ev.kind == "download_all_done" else "全部任务已结束。")

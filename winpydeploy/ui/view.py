@@ -125,6 +125,12 @@ class WinPyDeployView(ttk.Frame):
         self.proc_tree.column(self.PROC_COL_STATE, width=90, anchor=tk.CENTER, stretch=False)
         self.proc_tree.grid(row=1, column=0, sticky="ew", pady=(4, 0))
         self._bind_mouse_wheel(self.proc_tree, y=True, x=False)
+        actf = ttk.Frame(statusf)
+        actf.grid(row=2, column=0, sticky="ew", pady=(6, 0))
+        self.btn_proc_start = ttk.Button(actf, text="启动", style="Toolbar.TButton")
+        self.btn_proc_stop = ttk.Button(actf, text="结束", style="Toolbar.TButton")
+        self.btn_proc_start.pack(side=tk.LEFT)
+        self.btn_proc_stop.pack(side=tk.LEFT, padx=(8, 0))
         sub = ttk.Panedwindow(bottom, orient=tk.HORIZONTAL); sub.pack(fill=tk.BOTH, expand=True)
         logf, taskf = ttk.Labelframe(sub, text="日志", padding=inner), ttk.Labelframe(sub, text="任务", padding=inner); sub.add(logf, weight=3); sub.add(taskf, weight=1)
         logf.grid_rowconfigure(0, weight=1); logf.grid_columnconfigure(0, weight=1)
@@ -145,12 +151,14 @@ class WinPyDeployView(ttk.Frame):
     def set_log_sink(self, sink: Callable[[str], None] | None) -> None:
         self._log_sink = sink
 
-    def set_handlers(self, *, on_refresh, on_select_missing, on_settings, on_download, on_install, on_tree_select, on_cancel_task) -> None:
+    def set_handlers(self, *, on_refresh, on_select_missing, on_settings, on_download, on_install, on_tree_select, on_cancel_task, on_proc_start, on_proc_stop) -> None:
         self.btn_refresh.configure(command=on_refresh); self.btn_select_missing.configure(command=on_select_missing)
         self.btn_settings.configure(command=on_settings)
         self.btn_download.configure(command=on_download); self.btn_install.configure(command=on_install)
         self.tree.bind("<<TreeviewSelect>>", on_tree_select)
         self.btn_cancel_task.configure(command=on_cancel_task)
+        self.btn_proc_start.configure(command=on_proc_start)
+        self.btn_proc_stop.configure(command=on_proc_stop)
 
     def log(self, line: str) -> None:
         ts = time.strftime("%H:%M:%S")
@@ -188,6 +196,11 @@ class WinPyDeployView(ttk.Frame):
             return
         for proc, state in items:
             self.proc_tree.insert("", tk.END, values=(proc, state))
+
+    def set_proc_actions_enabled(self, enabled: bool) -> None:
+        s = tk.NORMAL if enabled else tk.DISABLED
+        self.btn_proc_start.configure(state=s)
+        self.btn_proc_stop.configure(state=s)
 
     def set_tasks(self, items: list[tuple[str, str]]) -> None:
         self._task_ids = [i for i, _ in items]; self.task_list.delete(0, tk.END)

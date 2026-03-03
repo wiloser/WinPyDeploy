@@ -1,5 +1,5 @@
 @echo off
-setlocal EnableExtensions
+setlocal EnableExtensions EnableDelayedExpansion
 rem WinPyDeploy helper script (no registry writes)
 
 set "ROOT=%WINPYDEPLOY_INSTALL_DIR%"
@@ -17,8 +17,17 @@ set "EC=0"
 if defined SERVER (
   set "SERVER=%SERVER:"=%"
   if exist "%SERVER%" (
-    "%SERVER%" --version
-    if errorlevel 1 set "EC=%ERRORLEVEL%"
+    set "VLINE="
+    for /f "usebackq delims=" %%L in (`"%SERVER%" --version 2^>nul`) do if not defined VLINE set "VLINE=%%L"
+    if defined VLINE (
+      set "VER=!VLINE:*v=!"
+      for /f "tokens=1 delims= " %%V in ("!VER!") do set "VER=%%V"
+      echo Redis !VER!
+      echo !VLINE!
+    ) else (
+      "%SERVER%" --version
+      if errorlevel 1 set "EC=!ERRORLEVEL!"
+    )
     echo %SERVER%
   ) else (
     echo redis-server.exe path invalid: "%SERVER%"
@@ -44,4 +53,4 @@ if defined CLI (
   echo redis-cli.exe not found under "%BASE%"
 )
 
-exit /b %EC%
+exit /b !EC!

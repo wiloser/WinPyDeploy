@@ -30,6 +30,9 @@
       "infoCommands": [
         "\"%WINPYDEPLOY_PACKAGES_DIR%\\scripts\\info_python.cmd\""
       ],
+      "postInstallCommands": [
+        "\"%WINPYDEPLOY_PACKAGES_DIR%\\scripts\\persist_path.cmd\""
+      ],
       "detectKeywords": ["python"]
     },
     "pycharm": {
@@ -58,6 +61,9 @@
       "infoCommands": [
         "\"%WINPYDEPLOY_PACKAGES_DIR%\\scripts\\info_mysql.cmd\""
       ],
+      "postInstallCommands": [
+        "\"%WINPYDEPLOY_PACKAGES_DIR%\\scripts\\persist_path.cmd\""
+      ],
       "detectKeywords": ["mysql"]
     },
     "redis": {
@@ -75,6 +81,9 @@
       ],
       "infoCommands": [
         "\"%WINPYDEPLOY_PACKAGES_DIR%\\scripts\\info_redis.cmd\""
+      ],
+      "postInstallCommands": [
+        "\"%WINPYDEPLOY_PACKAGES_DIR%\\scripts\\persist_path.cmd\""
       ],
       "detectKeywords": ["redis"]
     }

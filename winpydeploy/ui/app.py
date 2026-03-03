@@ -61,8 +61,11 @@ class WinPyDeployApp:
             on_install=self.controller.start_install,
             on_tree_select=self.controller.on_tree_select,
             on_cancel_task=self.controller.cancel_selected_task,
+            on_proc_start=self.controller.start_selected_process,
+            on_proc_stop=self.controller.stop_selected_process,
         )
         self.controller.refresh_detection()
+        self.controller.detect_versions_once()
         self.view.log(f"日志文件：{logger.path}")
         self.controller.start_service_polling(root)
         root.after(100, self._drain_events)
