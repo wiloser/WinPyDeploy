@@ -21,7 +21,7 @@
       "downloadUrl": "https://gitee.com/allinth/downloadpub/releases/download/python-3.12.10-amd64/python-3.12.10-amd64.zip",
       "sha256": "",
       "installerType": "zip",
-      "targetDir": "C:\\Program Files\\softs\\Python312",
+      "targetDir": "%WINPYDEPLOY_INSTALL_DIR%\\Python312",
       "installScript": "scripts/install_python.cmd",
       "expectedPaths": ["%WINPYDEPLOY_INSTALL_DIR%\\Python312\\python.exe"],
       "detectCommands": [
@@ -55,11 +55,10 @@
       "targetDir": "%WINPYDEPLOY_INSTALL_DIR%\\MySQL",
       "installScript": "scripts/install_mysql.cmd",
       "detectCommands": [
-        "cmd /c \"for /r \\\"%WINPYDEPLOY_INSTALL_DIR%\\MySQL\\\" %F in (mysqld.exe) do (exit /b 0) & exit /b 1\""
+        "\"%WINPYDEPLOY_PACKAGES_DIR%\\scripts\\detect_mysql.cmd\""
       ],
       "infoCommands": [
-        "cmd /c \"for /r \\\"%WINPYDEPLOY_INSTALL_DIR%\\MySQL\\\" %F in (mysqld.exe) do (\"%F\" --version & exit /b 0) & echo mysqld.exe not found & exit /b 1\"",
-        "cmd /c \"for /r \\\"%WINPYDEPLOY_INSTALL_DIR%\\MySQL\\\" %F in (mysql.exe) do (\"%F\" --version & exit /b 0) & echo mysql.exe not found & exit /b 1\""
+        "\"%WINPYDEPLOY_PACKAGES_DIR%\\scripts\\info_mysql.cmd\""
       ],
       "detectKeywords": ["mysql"]
     },
@@ -73,11 +72,10 @@
       "targetDir": "%WINPYDEPLOY_INSTALL_DIR%\\Redis",
       "installScript": "scripts/install_redis.cmd",
       "detectCommands": [
-        "cmd /c \"for /r \\\"%WINPYDEPLOY_INSTALL_DIR%\\Redis\\\" %F in (redis-server.exe) do (exit /b 0) & exit /b 1\""
+        "\"%WINPYDEPLOY_PACKAGES_DIR%\\scripts\\detect_redis.cmd\""
       ],
       "infoCommands": [
-        "cmd /c \"for /r \\\"%WINPYDEPLOY_INSTALL_DIR%\\Redis\\\" %F in (redis-server.exe) do (\"%F\" --version & exit /b 0) & echo redis-server.exe not found & exit /b 1\"",
-        "cmd /c \"for /r \\\"%WINPYDEPLOY_INSTALL_DIR%\\Redis\\\" %F in (redis-cli.exe) do (\"%F\" --version & exit /b 0) & echo redis-cli.exe not found & exit /b 1\""
+        "\"%WINPYDEPLOY_PACKAGES_DIR%\\scripts\\info_redis.cmd\""
       ],
       "detectKeywords": ["redis"]
     }

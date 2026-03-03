@@ -226,19 +226,35 @@ def ensure_install_config() -> Path:
         path.write_text(json.dumps(default_config, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
     scripts = packages_dir() / "scripts"; scripts.mkdir(parents=True, exist_ok=True)
-    for name in ("install_python.cmd", "install_mysql.cmd", "install_redis.cmd"):
+    for name in (
+        "install_python.cmd",
+        "install_mysql.cmd",
+        "install_redis.cmd",
+        "detect_mysql.cmd",
+        "info_mysql.cmd",
+        "detect_redis.cmd",
+        "info_redis.cmd",
+    ):
         dst = scripts / name
         if dst.exists():
             try:
                 b = dst.read_bytes()
                 # Only overwrite when the script looks older than our current strategy:
                 # unzip only; PATH is injected by WinPyDeploy at runtime (no registry writes).
-                required = (
-                    b"WINPYDEPLOY_INSTALL_DIR",
-                    b"PATH is injected",
-                )
-                if all(m in b for m in required):
-                    continue
+                if name.startswith("install_"):
+                    required = (
+                        b"WINPYDEPLOY_INSTALL_DIR",
+                        b"PATH is injected",
+                    )
+                    if all(m in b for m in required):
+                        continue
+                else:
+                    required = (
+                        b"WINPYDEPLOY_INSTALL_DIR",
+                        b"WinPyDeploy helper script",
+                    )
+                    if all(m in b for m in required):
+                        continue
             except Exception:
                 continue
         bundled = _bundled_packages_file(f"scripts/{name}")
