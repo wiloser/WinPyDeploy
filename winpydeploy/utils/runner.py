@@ -44,7 +44,7 @@ class CommandRunner:
         script_path = self._extract_installer_path(cmd)
         s = cmd.strip()
         if script_path and s == f'"{script_path}"' and Path(script_path).suffix.lower() in {".cmd", ".bat"}:
-            popen_cmd = ["cmd.exe", "/d", "/s", "/c", f'call "{script_path}"']
+            popen_cmd = ["cmd.exe", "/d", "/c", "call", script_path]
             popen_shell = False
 
         self._proc = subprocess.Popen(
